@@ -2,8 +2,11 @@ package com.kicksplit.backend.algorithm;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class TeamSplitter {
+
+    private final Random random = new Random();
 
     public List<List<PlayerCandidate>> split(List<PlayerCandidate> players) {
         players.sort((a, b) -> Integer.compare(b.getRating(), a.getRating()));
@@ -25,15 +28,24 @@ public class TeamSplitter {
         };
 
         for (PlayerCandidate player : players) {
-            int bestTeam = -1;
+            int minSum = Integer.MAX_VALUE;
+            List<Integer> bestTeams = new ArrayList<>();
 
             for (int i = 0; i < 3; i++) {
                 if (teams.get(i).size() < targetSizes[i]) {
-                    if (bestTeam == -1 || teamSums[i] < teamSums[bestTeam]) {
-                        bestTeam = i;
+
+                    if (teamSums[i] < minSum) {
+                        minSum = teamSums[i];
+                        bestTeams.clear();
+                        bestTeams.add(i);
+
+                    } else if (teamSums[i] == minSum) {
+                        bestTeams.add(i);
                     }
                 }
             }
+
+            int bestTeam = bestTeams.get(random.nextInt(bestTeams.size()));
 
             teams.get(bestTeam).add(player);
             teamSums[bestTeam] += player.getRating();

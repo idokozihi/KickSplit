@@ -29,31 +29,36 @@ public class TeamSplitterTest {
         assertEquals(2, teams.get(1).size());
         assertEquals(2, teams.get(2).size());
 
-        assertEquals(7, teams.get(0).get(0).getRating()
-                + teams.get(0).get(1).getRating());
+        int[] sums = new int[3];
 
-        assertEquals(6, teams.get(1).get(0).getRating()
-                + teams.get(1).get(1).getRating());
+        for (int i = 0; i < 3; i++) {
+            for (PlayerCandidate player : teams.get(i)) {
+                sums[i] += player.getRating();
+            }
+        }
 
-        assertEquals(7, teams.get(2).get(0).getRating()
-                + teams.get(2).get(1).getRating());
+        java.util.Arrays.sort(sums);
+
+        assertEquals(6, sums[0]);
+        assertEquals(7, sums[1]);
+        assertEquals(7, sums[2]);
     }
 
     @Test
-void shouldSplitFourteenPlayersIntoFiveFiveFour() {
-    List<PlayerCandidate> players = new ArrayList<>();
+    void shouldSplitFourteenPlayersIntoFiveFiveFour() {
+        List<PlayerCandidate> players = new ArrayList<>();
 
-    for (int i = 1; i <= 14; i++) {
-        players.add(new PlayerCandidate("Player " + i, (i % 5) + 1));
+        for (int i = 1; i <= 14; i++) {
+            players.add(new PlayerCandidate("Player " + i, (i % 5) + 1));
+        }
+
+        TeamSplitter splitter = new TeamSplitter();
+
+        List<List<PlayerCandidate>> teams = splitter.split(players);
+
+        assertEquals(5, teams.get(0).size());
+        assertEquals(5, teams.get(1).size());
+        assertEquals(4, teams.get(2).size());
     }
-
-    TeamSplitter splitter = new TeamSplitter();
-
-    List<List<PlayerCandidate>> teams = splitter.split(players);
-
-    assertEquals(5, teams.get(0).size());
-    assertEquals(5, teams.get(1).size());
-    assertEquals(4, teams.get(2).size());
-}
 
 }
