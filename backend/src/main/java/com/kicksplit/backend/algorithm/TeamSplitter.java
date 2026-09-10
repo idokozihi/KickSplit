@@ -9,6 +9,9 @@ public class TeamSplitter {
     private final Random random = new Random();
 
     public List<List<PlayerCandidate>> split(List<PlayerCandidate> players) {
+        if (players.size() < 3) {
+            throw new IllegalArgumentException("At least 3 players are required");
+        }
         players.sort((a, b) -> Integer.compare(b.getRating(), a.getRating()));
         List<List<PlayerCandidate>> teams = new ArrayList<>();
 
