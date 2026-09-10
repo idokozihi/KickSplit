@@ -1,0 +1,164 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Brand, Icon } from "../components/UI";
+import { useApp } from "../state/context";
+
+export default function Login() {
+  const [signup, setSignup] = useState(false);
+  const [error, setError] = useState("");
+  const { login, register } = useApp();
+  const navigate = useNavigate();
+  function submit(event) {
+    event.preventDefault();
+    const fields = new FormData(event.currentTarget);
+    if (signup && fields.get("password") !== fields.get("confirm")) {
+      setError("Your passwords don’t match. Please try again.");
+      return;
+    }
+    if (signup && !fields.get("name").trim()) {
+      setError("Please enter your name.");
+      return;
+    }
+    if (signup) {
+      register(fields.get("name").trim(), fields.get("email").trim());
+      navigate("/profile-setup");
+    } else {
+      login(fields.get("email").trim());
+      navigate("/home");
+    }
+  }
+  return (
+    <div className="auth-shell">
+      <section className="auth-story">
+        <Brand />
+        <div className="auth-story-copy">
+          <p className="eyebrow">YOUR CREW. YOUR GAME.</p>
+          <h1>
+            Good games
+            <br />
+            start <em>here.</em>
+          </h1>
+          <p>
+            Bring your football group together.
+            <br />
+            Get the numbers. Split the teams. Play.
+          </p>
+          <div className="auth-pitch" aria-hidden="true">
+            <div className="pitch">
+              <span />
+              <i />
+            </div>
+            {["01", "07", "10", "05", "09"].map((number, i) => (
+              <span key={number} className={`shirt shirt-${i}`}>
+                {number}
+              </span>
+            ))}
+          </div>
+        </div>
+        <p className="auth-caption">THE WEEKLY GAME, SORTED.</p>
+      </section>
+      <section className="auth-form-panel">
+        <div className="auth-form-inner">
+          <p className="eyebrow">WELCOME TO KICKSPLIT</p>
+          <h2>
+            {signup ? "Find your football people." : "Back for another game?"}
+          </h2>
+          <p className="muted">
+            {signup
+              ? "Create an account and get your crew together."
+              : "Your next kickoff is just around the corner."}
+          </p>
+          <div className="segmented" aria-label="Account action">
+            <button
+              type="button"
+              aria-pressed={!signup}
+              className={!signup ? "selected" : ""}
+              onClick={() => {
+                setSignup(false);
+                setError("");
+              }}
+            >
+              Log in
+            </button>
+            <button
+              type="button"
+              aria-pressed={signup}
+              className={signup ? "selected" : ""}
+              onClick={() => {
+                setSignup(true);
+                setError("");
+              }}
+            >
+              Sign up
+            </button>
+          </div>
+          <form key={String(signup)} className="form" onSubmit={submit}>
+            {signup && (
+              <label>
+                Full name
+                <input
+                  name="name"
+                  placeholder="Alex Morgan"
+                  autoComplete="name"
+                  required
+                  maxLength={60}
+                />
+              </label>
+            )}
+            <label>
+              Email
+              <input
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                required
+              />
+            </label>
+            <label>
+              Password
+              <input
+                name="password"
+                type="password"
+                placeholder="At least 6 characters"
+                autoComplete={signup ? "new-password" : "current-password"}
+                minLength={6}
+                required
+              />
+            </label>
+            {signup && (
+              <label>
+                Confirm password
+                <input
+                  name="confirm"
+                  type="password"
+                  placeholder="Enter your password again"
+                  autoComplete="new-password"
+                  minLength={6}
+                  required
+                />
+              </label>
+            )}
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <button className="button primary">
+              {signup ? "Create account" : "Let’s play"}
+              <Icon name="arrow" size={19} />
+            </button>
+          </form>
+          <div className="demo-note">
+            <span className="live-dot" />
+            <p>
+              Explore the beta. Log in with any email and a password of 6+
+              characters for a demo account. Sign up to start fresh. Changes
+              last until you refresh.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
