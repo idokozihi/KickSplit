@@ -1,5 +1,5 @@
 import { useApp } from "../state/context";
-import { upcoming } from "../state/mock";
+import { rankedDaysByGroup } from "../state/mock";
 import {
   EmptyState,
   GameCard,
@@ -10,21 +10,21 @@ import {
 
 export default function Games() {
   const { games } = useApp();
-  const scheduled = upcoming(games);
+  const scheduled = rankedDaysByGroup(games);
   return (
     <>
       <PageHeading
         eyebrow="MAKE TIME FOR THE GAME"
         title="Your games"
-        subtitle="Every group. Every upcoming kickoff."
+        subtitle="Find a day to play across your groups."
       />
       <Section
-        title={`Upcoming games${scheduled.length ? ` · ${scheduled.length}` : ""}`}
+        title={`Proposed days${scheduled.length ? ` · ${scheduled.length}` : ""}`}
       >
         {scheduled.length ? (
           <div className="cards-grid">
-            {scheduled.map((game) => (
-              <GameCard game={game} key={game.id} />
+            {scheduled.map(({ game, day, popular }) => (
+              <GameCard game={game} day={day} popular={popular} key={`${game.id}-${day.id}`} />
             ))}
           </div>
         ) : (

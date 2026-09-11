@@ -113,8 +113,8 @@ export function initialState() {
 }
 export function upcoming(games) {
   return games
-    .filter((game) => new Date(game.date) > new Date())
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+    .filter((game) => game.proposedDays || new Date(game.date) > new Date())
+    .sort((a, b) => new Date(a.proposedDays?.[0]?.date || a.date) - new Date(b.proposedDays?.[0]?.date || b.date));
 }
 export function goingPlayers(game, user) {
   return [
@@ -134,4 +134,76 @@ export function makeProposals(players) {
       [order[0], order[2]] = [order[2], order[0]];
     return [0, 1, 2].map((team) => order.filter((_, i) => i % 3 === team));
   });
+}
+
+// Date-only strings are rendered in local time, without inventing a kickoff.
+export function proposedDate(date) {
+  return new Date(date.includes("T") ? date : `${date}T00:00:00`).toLocaleDateString("en-GB", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+}
+let mockIdSequence = 0;
+export function createMockId() {
+  return globalThis.crypto?.randomUUID?.() ?? `mock-${Date.now()}-${++mockIdSequence}`;
+}
+export function createProposedDay(date, user) {
+  return {
+    id: createMockId(), date,
+    proposedBy: { id: "me", name: user.name },
+    availability: {},
+  };
+}
+export function availableCount(day) {
+  return Object.values(day.availability).filter((value) => value === "AVAILABLE").length;
+}
+export function compareDays(a, b) {
+  return availableCount(b) - availableCount(a)
+    || a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
+}
+export function mostPopularDays(days) {
+  return [...days].sort(compareDays).slice(0, 1).map((day) => day.id);
+}
+// Adapt existing demo dates and responses; no additional dates are generated.
+export function gameDays(game) {
+  if (game.proposedDays) return game.proposedDays;
+  const response = (status) => status === "GOING" ? "AVAILABLE"
+    : status === "NOT_GOING" ? "UNAVAILABLE" : null;
+  return [{
+    id: game.id, date: game.date,
+    proposedBy: { id: "me", name: demoUser.name },
+    availability: Object.fromEntries([
+      ["me", response(game.rsvp)],
+      ...game.participants.map((player) => [player.id, response(player.status)]),
+    ].filter(([, value]) => value)),
+    guests: game.guests,
+  }];
+}
+export function rankedDays(games) {
+  return games.flatMap((game) => gameDays(game).map((day) => ({ game, day })))
+    .sort((a, b) => compareDays(a.day, b.day) || a.game.id.localeCompare(b.game.id));
+}
+export function rankedDaysByGroup(games) {
+  const groupIds = [...new Set(games.map((game) => game.groupId))].sort();
+  return groupIds.flatMap((groupId) =>
+    rankedDays(games.filter((game) => game.groupId === groupId))
+      .map((entry, index) => ({ ...entry, popular: index === 0 })),
+  );
+}
+export function dayGame(game, dayId) {
+  const day = gameDays(game).find((item) => item.id === dayId) || gameDays(game)[0];
+  const status = (id) => day.availability[id] === "AVAILABLE" ? "GOING"
+    : day.availability[id] === "UNAVAILABLE" ? "NOT_GOING" : "MAYBE";
+  return {
+    ...game, day, date: day.date, rsvp: status("me"),
+    participants: game.participants.map((player) => ({ ...player, status: status(player.id) })),
+    guests: day.guests || [],
+  };
+}
+export function respondToDay(game, dayId, memberId, response) {
+  return {
+    ...game,
+    proposedDays: gameDays(game).map((day) => day.id === dayId
+      ? { ...day, availability: { ...day.availability, [memberId]: response } }
+      : day),
+  };
 }

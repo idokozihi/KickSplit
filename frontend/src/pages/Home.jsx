@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useApp } from "../state/context";
-import { upcoming } from "../state/mock";
+import { rankedDays } from "../state/mock";
 import {
   EmptyState,
   GameCard,
@@ -12,8 +12,8 @@ import {
 
 export default function Home() {
   const { user, groups, games } = useApp();
-  const scheduled = upcoming(games);
-  const waiting = scheduled.filter((game) => !game.rsvp);
+  const scheduled = rankedDays(games);
+  const waiting = scheduled.filter(({ day }) => !day.availability.me);
   return (
     <>
       <PageHeading
@@ -33,7 +33,7 @@ export default function Home() {
       <div className="home-grid">
         <div>
           {scheduled[0] ? (
-            <GameCard game={scheduled[0]} featured />
+            <GameCard {...scheduled[0]} popular featured />
           ) : (
             <EmptyState
               title="Your next game starts with a group"
@@ -43,13 +43,13 @@ export default function Home() {
             />
           )}
           <Section
-            title="Waiting on your RSVP"
+            title="Waiting on your response"
             link={waiting.length ? { to: "/games", label: "All games" } : null}
           >
             {waiting.length ? (
               <div className="card-list">
-                {waiting.slice(0, 2).map((game) => (
-                  <GameCard key={game.id} game={game} />
+                {waiting.slice(0, 2).map(({ game, day }) => (
+                  <GameCard key={`${game.id}-${day.id}`} game={game} day={day} />
                 ))}
               </div>
             ) : (

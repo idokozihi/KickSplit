@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useApp } from "../state/context";
-import { upcoming } from "../state/mock";
+import { rankedDays } from "../state/mock";
 import {
   Avatar,
   BackLink,
@@ -29,7 +29,7 @@ export default function Group() {
         action="Your groups"
       />
     );
-  const scheduled = upcoming(games.filter((game) => game.groupId === groupId));
+  const scheduled = rankedDays(games.filter((game) => game.groupId === groupId));
   return (
     <>
       <BackLink to="/groups">Your groups</BackLink>
@@ -37,17 +37,17 @@ export default function Group() {
         <GroupImage group={group} large />
         <div>
           <p className="eyebrow">YOUR FOOTBALL CREW</p>
-          <h1>{group.name}</h1>
+          <h1><bdi>{group.name}</bdi></h1>
           <p>{group.description}</p>
           <span className="group-member-count">
             <Icon name="groups" size={17} />
-            {group.members.length} members
+            {group.members.length} {group.members.length === 1 ? "member" : "members"}
           </span>
         </div>
       </header>
       <div className="home-grid">
         <div>
-          <Section title="Upcoming games">
+          <Section title="Proposed days">
             <button
               className="button primary section-action"
               onClick={() => setCreating(true)}
@@ -57,14 +57,14 @@ export default function Group() {
             </button>
             {scheduled.length ? (
               <div className="card-list">
-                {scheduled.map((game) => (
-                  <GameCard game={game} key={game.id} />
+                {scheduled.map(({ game, day }, index) => (
+                  <GameCard game={game} day={day} popular={index === 0} key={`${game.id}-${day.id}`} />
                 ))}
               </div>
             ) : (
               <EmptyState
                 title="Who’s up for a game?"
-                description="Set a date and give your crew something to look forward to."
+                description="Propose a day and find out who is available."
               />
             )}
           </Section>
@@ -92,7 +92,7 @@ export default function Group() {
                 <Avatar name={user.name} photo={user.photo} />
                 <div>
                   <h3>{user.name}</h3>
-                  <small>In {group.name}</small>
+                  <small><bdi>{group.name}</bdi></small>
                 </div>
               </div>
               <div className="rating-summary">
@@ -107,7 +107,7 @@ export default function Group() {
                 ))}
               </div>
               <p className="form-hint">
-                Your self-ratings for this group only.
+                Your self-ratings relative to the players in this group.
               </p>
               <button
                 className="button secondary full-width"

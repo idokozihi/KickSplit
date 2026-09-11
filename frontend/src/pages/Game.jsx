@@ -1,7 +1,8 @@
+import ProposedDays from "../components/ProposedDays";
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useApp } from "../state/context";
-import { goingPlayers } from "../state/mock";
+import { goingPlayers, dayGame, gameDays, createMockId } from "../state/mock";
 import {
   Avatar,
   BackLink,
@@ -12,18 +13,14 @@ import {
   Section,
 } from "../components/UI";
 
-const statuses = [
-  { value: "GOING", label: "Going", icon: "check" },
-  { value: "MAYBE", label: "Maybe", icon: "clock" },
-  { value: "NOT_GOING", label: "Not going", icon: "close" },
-];
 export default function Game() {
   const { gameId } = useParams();
+  const [search] = useSearchParams();
   const { games, groups, user, updateGame } = useApp();
   const [addingGuest, setAddingGuest] = useState(false);
   const [error, setError] = useState("");
-  const game = games.find((item) => item.id === gameId);
-  if (!game)
+  const source = games.find((item) => item.id === gameId);
+  if (!source)
     return (
       <EmptyState
         title="Game not found"
@@ -32,9 +29,10 @@ export default function Game() {
         action="Your games"
       />
     );
+  const game = dayGame(source, search.get("day"));
   const group = groups.find((item) => item.id === game.groupId);
   const going = goingPlayers(game, user);
-  const date = new Date(game.date);
+  const date = new Date(game.date.includes("T") ? game.date : `${game.date}T00:00:00`);
   function addGuest(event) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
@@ -57,7 +55,8 @@ export default function Game() {
       return;
     }
     updateGame(gameId, {
-      guests: [...game.guests, { id: crypto.randomUUID(), name, rating }],
+      proposedDays: gameDays(source).map((day) => day.id === game.day.id
+        ? { ...day, guests: [...game.guests, { id: createMockId(), name, rating }] } : day),
     });
     setAddingGuest(false);
   }
@@ -65,11 +64,11 @@ export default function Game() {
     <>
       <BackLink to="/games">Your games</BackLink>
       <PageHeading
-        eyebrow="SEE YOU ON THE PITCH"
+        eyebrow="PLAN YOUR NEXT GAME"
         title={game.title}
         subtitle={
           <Link className="text-link" to={`/groups/${group.id}`}>
-            {group.name}
+            <bdi>{group.name}</bdi>
             <Icon name="arrow" size={16} />
           </Link>
         }
@@ -88,7 +87,7 @@ export default function Game() {
             </strong>
           </span>
         </div>
-        <div>
+        {game.date.includes("T") && <div>
           <Icon name="clock" />
           <span>
             Kickoff
@@ -99,100 +98,47 @@ export default function Game() {
               })}
             </strong>
           </span>
-        </div>
+        </div>}
         <div>
           <Icon name="groups" />
           <span>
             Player target
             <strong>
-              {going.length} / {game.target} going
+              {game.target} players
             </strong>
           </span>
         </div>
       </div>
       <div className="home-grid">
         <div>
-          <Section title="Are you in?">
-            <div className="panel">
-              <div className="rsvp-options">
-                {statuses.map((status) => (
-                  <button
-                    key={status.value}
-                    aria-pressed={game.rsvp === status.value}
-                    className={`rsvp-button ${game.rsvp === status.value ? "selected " + status.value : ""}`}
-                    onClick={() => updateGame(gameId, { rsvp: status.value })}
-                  >
-                    <Icon name={status.icon} size={19} />
-                    {status.label}
-                  </button>
-                ))}
-              </div>
-              <p className="form-hint" aria-live="polite">
-                {game.rsvp
-                  ? "Your response is saved for this session. You can change it anytime."
-                  : "Let your group know if you can make it."}
-              </p>
-            </div>
+          <Section title="Proposed days">
+            <ProposedDays game={source} allowProposing />
           </Section>
-          <Section title="The lineup">
+          <Section title={`The lineup · ${going.length} ${going.length === 1 ? "participant" : "participants"}`}>
             <div className="panel participant-panel">
-              {statuses.map((status) => {
-                const players = [
-                  ...(game.rsvp === status.value
-                    ? [{ id: "me", name: user.name }]
-                    : []),
-                  ...game.participants.filter(
-                    (player) => player.status === status.value,
-                  ),
-                ];
-                return (
-                  <div className="participant-section" key={status.value}>
-                    <h3>
-                      <span className={`status-dot ${status.value}`} />
-                      {status.label}
-                      <span className="count">{players.length}</span>
-                    </h3>
-                    {players.length ? (
-                      <div className="member-grid">
-                        {players.map((player) => (
-                          <div className="person" key={player.id}>
-                            <Avatar
-                              name={player.name}
-                              photo={
-                                player.id === "me" ? user.photo : undefined
-                              }
-                            />
-                            <span>
-                              {player.name}
-                              {player.id === "me" && <small>You</small>}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="muted">No players here yet.</p>
-                    )}
-                  </div>
-                );
-              })}
+              {going.length ? (
+                <div className="member-grid">
+                  {going.map((player) => (
+                    <div className="person" key={player.id}>
+                      <Avatar name={player.name} photo={player.id === "me" ? user.photo : undefined} />
+                      <span>
+                        <bdi>{player.name}</bdi>
+                        {player.id === "me" && <small>You</small>}
+                        {player.guest && <small>Guest · Rating {player.rating}/5</small>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted">No participants for this day yet.</p>
+              )}
             </div>
           </Section>
         </div>
         <aside>
           <Section title={`Guests · ${game.guests.length}`}>
             <div className="panel">
-              <p className="muted">Bringing a friend? Guests count as going.</p>
-              <div className="guest-list">
-                {game.guests.map((guest) => (
-                  <div className="person" key={guest.id}>
-                    <Avatar name={guest.name} />
-                    <span>
-                      {guest.name}
-                      <small>Guest · Going · Rating {guest.rating}/5</small>
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <p className="muted">Bringing a friend? Guests join the lineup for this day.</p>
               <button
                 className="button secondary full-width"
                 onClick={() => {
@@ -209,12 +155,12 @@ export default function Game() {
             <Icon name="ball" size={30} />
             <h2>Time to split the teams.</h2>
             <p>
-              Explore three ways to line up your confirmed players and guests.
+              Explore three ways to line up your available players and guests.
             </p>
             {going.length >= 3 ? (
               <Link
                 className="button primary full-width"
-                to={`/games/${gameId}/proposals`}
+                to={`/games/${gameId}/proposals?day=${game.day.id}`}
               >
                 Generate teams
                 <Icon name="arrow" size={18} />
@@ -225,7 +171,7 @@ export default function Game() {
                   Generate teams
                 </button>
                 <small>
-                  At least 3 confirmed players, including guests, are needed for
+                  At least 3 available players, including guests, are needed for
                   one player on each team.
                 </small>
               </>
@@ -259,8 +205,10 @@ export default function Game() {
               />
             </label>
             <p className="form-hint">
-              Choose a fixed rating from 1 (beginner) to 5 (advanced). Your guest
-              will be marked as going and included in team proposals.
+              Rate your guest relative to the players in this group.
+              1 — Weakest · 2 — Below average · 3 — Average · 4 — Above average · 5 — Strongest.
+              Your guest
+              will be included in this day's team proposals.
             </p>
             {error && (
               <p className="error" role="alert">

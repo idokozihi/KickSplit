@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../state/context";
-import { joinableGroup } from "../state/mock";
+import { joinableGroup, createProposedDay, createMockId } from "../state/mock";
 import { Avatar, GroupImage, Icon, Modal } from "./UI";
 
 export function RatingFields({ value, onChange }) {
@@ -9,8 +9,8 @@ export function RatingFields({ value, onChange }) {
     <fieldset className="ratings">
       <legend>Your ratings in this group</legend>
       <p className="muted">
-        Rate yourself from 1 (beginner) to 5 (advanced). These ratings belong
-        only to this group.
+        Rate yourself relative to the players in this group.
+        1 — Weakest · 2 — Below average · 3 — Average · 4 — Above average · 5 — Strongest
       </p>
       {["overall", "attack", "defense"].map((key) => (
         <div className="rating-row" key={key}>
@@ -179,23 +179,19 @@ export function GroupFlow({ mode, onClose }) {
   );
 }
 export function CreateGameForm({ groupId, onClose }) {
-  const { addGame } = useApp();
+  const { addGame, user } = useApp();
   const navigate = useNavigate();
   const [error, setError] = useState("");
   function submit(event) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
-    const date = new Date(fields.get("date"));
-    if (date <= new Date()) {
-      setError("Choose a date and time in the future.");
-      return;
-    }
+    const date = fields.get("date");
     const title = fields.get("title").trim();
     if (!title) {
       setError("Enter a game name.");
       return;
     }
-    const id = crypto.randomUUID();
+    const id = createMockId();
     const target = Number(fields.get("target"));
     if (!Number.isInteger(target) || target < 1) {
       setError("Enter a positive whole number for the player target.");
@@ -205,9 +201,9 @@ export function CreateGameForm({ groupId, onClose }) {
       id,
       groupId,
       title,
-      date: date.toISOString(),
+      proposedDays: [createProposedDay(date, user)],
       target,
-      rsvp: "GOING",
+      rsvp: null,
       participants: [],
       guests: [],
     });
@@ -228,8 +224,8 @@ export function CreateGameForm({ groupId, onClose }) {
           />
         </label>
         <label>
-          Date and time
-          <input name="date" type="datetime-local" required />
+          Propose a day
+          <input name="date" type="date" required />
         </label>
         <label>
           Target player count
@@ -243,7 +239,7 @@ export function CreateGameForm({ groupId, onClose }) {
           />
         </label>
         <p className="form-hint">
-          You’ll be marked as going when you create the game.
+          Add one proposed day, then mark your availability. Members can propose more days.
         </p>
         {error && (
           <p className="error" role="alert">

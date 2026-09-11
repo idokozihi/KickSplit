@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MockContext } from "./context";
-import { initialState } from "./mock";
+import { initialState, createProposedDay, respondToDay, gameDays } from "./mock";
 
 export default function MockProvider({ children }) {
   const [data, setData] = useState(initialState);
@@ -37,6 +37,19 @@ export default function MockProvider({ children }) {
         game.id === id ? { ...game, ...updates } : game,
       ),
     }));
+  const proposeDay = (gameId, date) =>
+    setData((current) => ({
+      ...current,
+      games: current.games.map((game) => game.id === gameId
+        ? { ...game, proposedDays: [...gameDays(game), createProposedDay(date, current.user)] }
+        : game),
+    }));
+  const setAvailability = (gameId, dayId, response) =>
+    setData((current) => ({
+      ...current,
+      games: current.games.map((game) => game.id === gameId
+        ? respondToDay(game, dayId, "me", response) : game),
+    }));
   return (
     <MockContext.Provider
       value={{
@@ -48,6 +61,8 @@ export default function MockProvider({ children }) {
         updateRatings,
         addGame,
         updateGame,
+        proposeDay,
+        setAvailability,
       }}
     >
       {children}

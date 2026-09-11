@@ -1,13 +1,14 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useApp } from "../state/context";
-import { goingPlayers, makeProposals } from "../state/mock";
+import { goingPlayers, makeProposals, dayGame } from "../state/mock";
 import { Avatar, BackLink, EmptyState, PageHeading } from "../components/UI";
 
 export default function TeamProposals() {
   const { gameId } = useParams();
+  const [search] = useSearchParams();
   const { games, groups, user } = useApp();
-  const game = games.find((item) => item.id === gameId);
-  if (!game)
+  const source = games.find((item) => item.id === gameId);
+  if (!source)
     return (
       <EmptyState
         title="Game not found"
@@ -16,13 +17,14 @@ export default function TeamProposals() {
         action="Your games"
       />
     );
+  const game = dayGame(source, search.get("day"));
   const players = goingPlayers(game, user);
   if (players.length < 3)
     return (
       <EmptyState
         title="A few more players first"
-        description="At least 3 confirmed players, including guests, are needed for one player on each team."
-        to={`/games/${gameId}`}
+        description="At least 3 available players, including guests, are needed for one player on each team."
+        to={`/games/${gameId}?day=${game.day.id}`}
         action="Back to game"
       />
     );
@@ -30,11 +32,11 @@ export default function TeamProposals() {
   const group = groups.find((item) => item.id === game.groupId);
   return (
     <>
-      <BackLink to={`/games/${gameId}`}>Back to game</BackLink>
+      <BackLink to={`/games/${gameId}?day=${game.day.id}`}>Back to game</BackLink>
       <PageHeading
-        eyebrow={group.name}
+        eyebrow={<bdi>{group.name}</bdi>}
         title="Three ways to play."
-        subtitle={`${game.title} · ${players.length} confirmed players, including guests`}
+        subtitle={<><bdi>{game.title}</bdi> · {players.length} available players, including guests</>}
       />
       <p className="proposal-intro">
         {players.length === 3

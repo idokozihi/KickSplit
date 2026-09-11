@@ -16,6 +16,8 @@
 body {
   margin: 0;
   min-width: 320px;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 button,
 input {
@@ -149,14 +151,16 @@ svg {
   max-width: 1440px;
   margin: auto;
   min-height: 100svh;
+  min-height: 100dvh;
 }
 .app-header {
-  height: 86px;
+  height: calc(86px + env(safe-area-inset-top, 0px));
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
   gap: 24px;
   padding: 0 6%;
+  padding-top: env(safe-area-inset-top, 0px);
   background: #fcfdf9;
 }
 .brand {
@@ -261,6 +265,7 @@ svg {
   margin: auto;
   padding: 40px 36px 70px;
   min-height: calc(100svh - 217px);
+  min-height: calc(100dvh - 217px - env(safe-area-inset-top, 0px));
 }
 .page-heading {
   display: flex;
@@ -816,6 +821,9 @@ svg {
   gap: 9px;
   margin-bottom: 15px;
 }
+.rsvp-options.availability-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .rsvp-button {
   border: 1px solid #e0e6d9;
   background: #fafbf8;
@@ -1045,6 +1053,7 @@ svg {
   padding: 0;
   width: min(470px, calc(100% - 28px));
   max-height: 88svh;
+  max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 28px));
   color: #182b25;
   box-shadow: 0 20px 100px #0003;
 }
@@ -1208,6 +1217,9 @@ input:focus {
   display: grid;
   grid-template-columns: 1.05fr 1fr;
   min-height: 100svh;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .auth-story {
   background: var(--green);
@@ -1381,7 +1393,8 @@ input:focus {
 .setup-shell {
   max-width: 1100px;
   margin: auto;
-  padding: 35px;
+  padding: calc(35px + env(safe-area-inset-top, 0px)) 35px
+    calc(35px + env(safe-area-inset-bottom, 0px));
 }
 .setup-card {
   max-width: 440px;
@@ -1444,8 +1457,8 @@ input:focus {
 }
 @media (max-width: 700px) {
   .app-header {
-    height: 72px;
-    padding: 0 21px;
+    height: calc(72px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 21px 0;
   }
   .brand {
     font-size: 23px;
@@ -1461,7 +1474,9 @@ input:focus {
     z-index: 5;
     justify-content: space-around;
     gap: 0;
-    padding: 4px 8px env(safe-area-inset-bottom);
+    padding: 4px calc(8px + env(safe-area-inset-right, 0px))
+      calc(4px + env(safe-area-inset-bottom, 0px))
+      calc(8px + env(safe-area-inset-left, 0px));
     border-top: 1px solid #dce3d3;
     border-bottom: 0;
     background: #fcfdf9f5;
@@ -1485,6 +1500,7 @@ input:focus {
   .main-content {
     padding: 30px 20px 35px;
     min-height: calc(100svh - 205px);
+    min-height: calc(100dvh - 205px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
   .page-heading {
     flex-direction: column;
@@ -1546,7 +1562,7 @@ input:focus {
     display: none;
   }
   .app-footer {
-    margin-bottom: calc(74px + env(safe-area-inset-bottom));
+    margin-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
     padding: 22px 20px;
     font-size: 9px;
   }
@@ -1654,7 +1670,8 @@ input:focus {
     font-size: 27px;
   }
   .setup-shell {
-    padding: 25px;
+    padding: calc(25px + env(safe-area-inset-top, 0px)) 25px
+      calc(25px + env(safe-area-inset-bottom, 0px));
   }
   .setup-card {
     margin: 45px auto;

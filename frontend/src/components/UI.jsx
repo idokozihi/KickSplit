@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useApp } from "../state/context";
-import { goingPlayers, upcoming } from "../state/mock";
+import { availableCount, gameDays, proposedDate, rankedDays } from "../state/mock";
 
 export function Icon({ name = "ball", size = 22, ...props }) {
   const paths = {
@@ -170,79 +170,57 @@ export function Status({ value }) {
     </span>
   );
 }
-export function GameCard({ game, featured = false }) {
-  const { groups, user } = useApp();
-  const group = groups.find((g) => g.id === game.groupId);
-  const date = new Date(game.date);
-  const count = goingPlayers(game, user).length;
+export function GameCard({ game, day = gameDays(game)[0], popular = false, featured = false }) {
+  const { groups, user, setAvailability } = useApp();
+  const group = groups.find((item) => item.id === game.groupId);
+  const count = availableCount(day);
   return (
-    <Link
-      to={`/games/${game.id}`}
-      className={`game-card ${featured ? "featured" : ""}`}
-    >
-      {featured && (
-        <>
-          <div className="pitch" aria-hidden="true">
-            <span />
-            <i />
-          </div>
-          <p className="eyebrow">UP NEXT · LET’S PLAY</p>
-        </>
-      )}
+    <article className={`game-card ${featured ? "featured" : ""}`}>
       <div className="game-card-top">
-        <span className="group-label">{group?.name}</span>
-        <Status value={game.rsvp} />
+        <span className="group-label"><bdi>{group?.name}</bdi></span>
+        {popular && <span className="badge GOING">Most popular</span>}
       </div>
-      <h3>{game.title}</h3>
+      <h3><Link to={`/games/${game.id}?day=${day.id}`}><bdi>{game.title}</bdi></Link></h3>
       <div className="game-meta">
-        <span>
-          <Icon name="games" size={17} />
-          {date.toLocaleDateString("en-GB", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-          })}
-        </span>
-        <span>
-          <Icon name="clock" size={17} />
-          {date.toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </span>
+        <span><Icon name="games" size={17} />{proposedDate(day.date)}</span>
+        {day.date.includes("T") && <span><Icon name="clock" size={17} />
+          {new Date(day.date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+        </span>}
       </div>
+      <p className="form-hint">Proposed by <bdi>{day.proposedBy.id === "me" ? user.name : day.proposedBy.name}</bdi></p>
       <div className="game-card-bottom">
-        <span>
-          <Icon name="groups" size={18} />
-          <b>{count}</b> / {game.target} players going
-        </span>
-        <span className="circle-arrow">
-          <Icon name="arrow" size={20} />
-        </span>
+        <span aria-live="polite"><Icon name="groups" size={18} /><b>{count}</b> {count === 1 ? "member" : "members"} available</span>
+        <Link className="circle-arrow" to={`/games/${game.id}?day=${day.id}`} aria-label={`View ${game.title}, ${proposedDate(day.date)}`}><Icon name="arrow" size={20} /></Link>
       </div>
-      {featured && (
-        <div className="progress">
-          <span
-            style={{ width: `${Math.min(100, (count / game.target) * 100)}%` }}
-          />
-        </div>
-      )}
-    </Link>
+      <div className="rsvp-options availability-options" role="group" aria-label={`Your availability for ${proposedDate(day.date)}`}>
+        {[
+          { value: "AVAILABLE", label: "Available", style: "GOING", icon: "check" },
+          { value: "UNAVAILABLE", label: "Unavailable", style: "NOT_GOING", icon: "close" },
+        ].map((option) => (
+          <button key={option.value}
+            className={`rsvp-button ${day.availability.me === option.value ? `selected ${option.style}` : ""}`}
+            aria-pressed={day.availability.me === option.value}
+            onClick={() => setAvailability(game.id, day.id, option.value)}>
+            <Icon name={option.icon} size={18} />{option.label}
+          </button>
+        ))}
+      </div>
+    </article>
   );
 }
 export function GroupCard({ group }) {
   const { games } = useApp();
-  const next = upcoming(games.filter((g) => g.groupId === group.id))[0];
+  const proposals = rankedDays(games.filter((g) => g.groupId === group.id));
   return (
     <Link to={`/groups/${group.id}`} className="group-card">
       <GroupImage group={group} />
       <div>
-        <h3>{group.name}</h3>
-        <p>{group.members.length} members</p>
+        <h3><bdi>{group.name}</bdi></h3>
+        <p>{group.members.length} {group.members.length === 1 ? "member" : "members"}</p>
         <small>
-          {next
-            ? `Next game · ${new Date(next.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
-            : "No games scheduled yet"}
+          {proposals.length
+            ? `${proposals.length} proposed ${proposals.length === 1 ? "day" : "days"}`
+            : "No days proposed yet"}
         </small>
       </div>
       <Icon name="arrow" size={18} />
