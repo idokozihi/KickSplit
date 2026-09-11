@@ -41,40 +41,39 @@ public class Guest {
     }
 
     public Long getId() {
-    return id;
-}
+        return id;
+    }
 
-public String getName() {
-    return name;
-}
+    public String getName() {
+        return name;
+    }
 
-public void setName(String name) {
-    this.name = name;
-}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-public int getRating() {
-    return rating;
-}
+    public int getRating() {
+        return rating;
+    }
 
-public void setRating(int rating) {
-    this.rating = rating;
-}
+    public void setRating(int rating) {
+        this.rating = rating;
+    }
 
-public Game getGame() {
-    return game;
-}
+    public Game getGame() {
+        return game;
+    }
 
-public void setGame(Game game) {
-    this.game = game;
-}
+    public void setGame(Game game) {
+        this.game = game;
+    }
 
-public User getAddedBy() {
-    return addedBy;
-}
+    public User getAddedBy() {
+        return addedBy;
+    }
 
-public void setAddedBy(User addedBy) {
-    this.addedBy = addedBy;
-}
-
+    public void setAddedBy(User addedBy) {
+        this.addedBy = addedBy;
+    }
 
 }

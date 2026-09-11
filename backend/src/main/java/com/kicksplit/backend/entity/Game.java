@@ -25,8 +25,9 @@ public class Game {
 
     @ManyToOne
     @JoinColumn(name = "group_id")
-    
+
     private Group group;
+    private String name;
 
     private LocalDate date;
     private LocalTime time;
@@ -36,48 +37,57 @@ public class Game {
     public Game() {
     }
 
-    public Game(Group group, LocalDate date, LocalTime time, 
-        int targetPlayers) {
+    public Game(Group group, String name, LocalDate date, LocalTime time, int targetPlayers) {
         this.group = group;
+        this.name = name;
         this.date = date;
         this.time = time;
         this.targetPlayers = targetPlayers;
     }
 
     public Long getId() {
-    return id;
-}
+        return id;
+    }
 
-public Group getGroup() {
-    return group;
-}
+    public Group getGroup() {
+        return group;
+    }
 
-public void setGroup(Group group) {
-    this.group = group;
-}
+    public void setGroup(Group group) {
+        this.group = group;
+    }
 
-public LocalDate getDate() {
-    return date;
-}
+    public LocalDate getDate() {
+        return date;
+    }
 
-public void setDate(LocalDate date) {
-    this.date = date;
-}
+    public void setDate(LocalDate date) {
+        this.date = date;
+    }
 
-public LocalTime getTime() {
-    return time;
-}
+    public LocalTime getTime() {
+        return time;
+    }
 
-public void setTime(LocalTime time) {
-    this.time = time;
-}
+    public void setTime(LocalTime time) {
+        this.time = time;
+    }
 
-public int getTargetPlayers() {
-    return targetPlayers;
-}
+    public int getTargetPlayers() {
+        return targetPlayers;
+    }
 
-public void setTargetPlayers(int targetPlayers) {
-    this.targetPlayers = targetPlayers;
-}
+    public void setTargetPlayers(int targetPlayers) {
+        this.targetPlayers = targetPlayers;
+
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
 }

@@ -49,57 +49,55 @@ public class GroupMember {
     }
 
     public Long getId() {
-    return id;
-}
+        return id;
+    }
 
-public User getUser() {
-    return user;
-}
+    public User getUser() {
+        return user;
+    }
 
-public void setUser(User user) {
-    this.user = user;
-}
+    public void setUser(User user) {
+        this.user = user;
+    }
 
-public Group getGroup() {
-    return group;
-}
+    public Group getGroup() {
+        return group;
+    }
 
-public void setGroup(Group group) {
-    this.group = group;
-}
+    public void setGroup(Group group) {
+        this.group = group;
+    }
 
-public boolean isAdmin() {
-    return admin;
-}
+    public boolean isAdmin() {
+        return admin;
+    }
 
-public void setAdmin(boolean admin) {
-    this.admin = admin;
-}
+    public void setAdmin(boolean admin) {
+        this.admin = admin;
+    }
 
-public int getSelfOverallRating() {
-    return selfOverallRating;
-}
+    public int getSelfOverallRating() {
+        return selfOverallRating;
+    }
 
-public void setSelfOverallRating(int selfOverallRating) {
-    this.selfOverallRating = selfOverallRating;
-}
+    public void setSelfOverallRating(int selfOverallRating) {
+        this.selfOverallRating = selfOverallRating;
+    }
 
-public int getSelfAttackRating() {
-    return selfAttackRating;
-}
+    public int getSelfAttackRating() {
+        return selfAttackRating;
+    }
 
-public void setSelfAttackRating(int selfAttackRating) {
-    this.selfAttackRating = selfAttackRating;
-}
+    public void setSelfAttackRating(int selfAttackRating) {
+        this.selfAttackRating = selfAttackRating;
+    }
 
-public int getSelfDefenseRating() {
-    return selfDefenseRating;
-}
+    public int getSelfDefenseRating() {
+        return selfDefenseRating;
+    }
 
-public void setSelfDefenseRating(int selfDefenseRating) {
-    this.selfDefenseRating = selfDefenseRating;
-}
-
-
+    public void setSelfDefenseRating(int selfDefenseRating) {
+        this.selfDefenseRating = selfDefenseRating;
+    }
 
 }
