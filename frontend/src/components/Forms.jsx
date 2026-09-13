@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../state/context";
-import { joinableGroup, createProposedDay, createMockId } from "../state/mock";
 import { Avatar, GroupImage, Icon, Modal } from "./UI";
 
 export function RatingFields({ value, onChange }) {
@@ -35,11 +34,12 @@ export function RatingFields({ value, onChange }) {
   );
 }
 export function GroupFlow({ mode, onClose }) {
-  const { user, groups, addGroup } = useApp();
+  const { addGroup } = useApp();
   const navigate = useNavigate();
   const [ratings, setRatings] = useState({ overall: 3, attack: 3, defense: 3 });
   const [image, setImage] = useState("");
   const [readingImage, setReadingImage] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   function uploadImage(event) {
     const file = event.target.files?.[0];
@@ -64,54 +64,27 @@ export function GroupFlow({ mode, onClose }) {
     };
     reader.readAsDataURL(file);
   }
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
+    if (saving || readingImage) return;
     const fields = new FormData(event.currentTarget);
-    if (
-      mode === "join" &&
-      fields.get("code").trim().toUpperCase() !== "PARK5"
-    ) {
-      setError("That invite code was not found. Try PARK5 for this demo.");
+    const name = mode === "create" ? fields.get("name").trim() : "";
+    const inviteToken = mode === "join" ? fields.get("code").trim() : undefined;
+    if (mode === "create" ? !name : !inviteToken) {
+      setError(mode === "create" ? "Enter a group name." : "Enter an invite code.");
       return;
     }
-    if (
-      mode === "join" &&
-      groups.some((group) => group.id === joinableGroup.id)
-    ) {
-      setError("You are already a member of Parkside Five.");
-      return;
+    setError("");
+    setSaving(true);
+    try {
+      const group = await addGroup({ name, image, ratings, inviteToken });
+      onClose();
+      navigate(`/groups/${group.id}`);
+    } catch (error) {
+      setError(error.message || "Could not save the group. Please try again.");
+    } finally {
+      setSaving(false);
     }
-    const name =
-      mode === "create" ? fields.get("name").trim() : joinableGroup.name;
-    if (!name) {
-      setError("Enter a group name.");
-      return;
-    }
-    const group =
-      mode === "join"
-        ? {
-            ...joinableGroup,
-            members: [user.name, ...joinableGroup.members],
-            ratings,
-          }
-        : {
-            id: crypto.randomUUID(),
-            name,
-            initials: name
-              .split(" ")
-              .map((word) => word[0])
-              .slice(0, 2)
-              .join("")
-              .toUpperCase(),
-            color: "green",
-            image,
-            description: "Your crew. Your game.",
-            members: [user.name],
-            ratings,
-          };
-    addGroup(group);
-    onClose();
-    navigate(`/groups/${group.id}`);
   }
   return (
     <Modal
@@ -142,7 +115,7 @@ export function GroupFlow({ mode, onClose }) {
               />
             </label>
             <p className="form-hint">
-              Try <strong>PARK5</strong> to join Parkside Five in this demo.
+              Enter the invite token for an existing group.
             </p>
           </>
         )}
@@ -170,8 +143,8 @@ export function GroupFlow({ mode, onClose }) {
             {error}
           </p>
         )}
-        <button className="button primary" type="submit" disabled={readingImage}>
-          {mode === "create" ? "Create group" : "Join group"}
+        <button className="button primary" type="submit" disabled={readingImage || saving}>
+          {saving ? "Saving..." : mode === "create" ? "Create group" : "Join group"}
           <Icon name="arrow" size={18} />
         </button>
       </form>
@@ -179,11 +152,13 @@ export function GroupFlow({ mode, onClose }) {
   );
 }
 export function CreateGameForm({ groupId, onClose }) {
-  const { addGame, user } = useApp();
+  const { addGame } = useApp();
   const navigate = useNavigate();
   const [error, setError] = useState("");
-  function submit(event) {
+  const [saving, setSaving] = useState(false);
+  async function submit(event) {
     event.preventDefault();
+    if (saving) return;
     const fields = new FormData(event.currentTarget);
     const date = fields.get("date");
     const title = fields.get("title").trim();
@@ -191,24 +166,22 @@ export function CreateGameForm({ groupId, onClose }) {
       setError("Enter a game name.");
       return;
     }
-    const id = createMockId();
     const target = Number(fields.get("target"));
     if (!Number.isInteger(target) || target < 1) {
       setError("Enter a positive whole number for the player target.");
       return;
     }
-    addGame({
-      id,
-      groupId,
-      title,
-      proposedDays: [createProposedDay(date, user)],
-      target,
-      rsvp: null,
-      participants: [],
-      guests: [],
-    });
-    onClose();
-    navigate(`/games/${id}`);
+    setError("");
+    setSaving(true);
+    try {
+      const game = await addGame({ groupId, title, date, target });
+      onClose();
+      navigate(`/games/${game.id}`);
+    } catch (error) {
+      setError(error.message || "Could not create game. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
   return (
     <Modal title="Get a game together" onClose={onClose}>
@@ -246,8 +219,8 @@ export function CreateGameForm({ groupId, onClose }) {
             {error}
           </p>
         )}
-        <button className="button primary">
-          Create game
+        <button className="button primary" disabled={saving}>
+          {saving ? "Saving..." : "Create game"}
           <Icon name="arrow" size={18} />
         </button>
       </form>

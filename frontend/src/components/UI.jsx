@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useApp } from "../state/context";
 import { availableCount, gameDays, proposedDate, rankedDays } from "../state/mock";
@@ -170,10 +170,55 @@ export function Status({ value }) {
     </span>
   );
 }
-export function GameCard({ game, day = gameDays(game)[0], popular = false, featured = false }) {
-  const { groups, user, setAvailability } = useApp();
+export function GameCard({ game, day = gameDays(game)[0], popular = false, featured = false, registrationStatus, showParticipants = false, loadGuestList = false }) {
+  const { groups, user, setAvailability, refreshRegistrations, refreshGuests } = useApp();
+  const [guestError, setGuestError] = useState(null);
+  const [guestRetry, setGuestRetry] = useState(0);
+  const guestKey = `${game.id}:${guestRetry}`;
+  useEffect(() => {
+    if (!loadGuestList || !game.backendBacked || game.guestsLoaded) return;
+    const controller = new AbortController();
+    refreshGuests(game.id, controller.signal).catch((error) => {
+      if (!controller.signal.aborted) setGuestError({ key: guestKey, message: error.message || "Could not load guests." });
+    });
+    return () => controller.abort();
+  }, [loadGuestList, game.backendBacked, game.id, game.guestsLoaded, refreshGuests, guestKey]);
+  const guestsLoading = loadGuestList && game.backendBacked && !game.guestsLoaded;
+  const guestFailure = guestsLoading && guestError?.key === guestKey ? guestError.message : "";
+  const [availabilityError, setAvailabilityError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const requestKey = `${game.id}:${user.email}:${retry}`;
+  const [loadedKey, setLoadedKey] = useState(null);
+  const registrationsManaged = Boolean(registrationStatus);
+  useEffect(() => {
+    if (!game.backendBacked || registrationsManaged) return;
+    const controller = new AbortController();
+    refreshRegistrations(game.id, controller.signal)
+      .then(() => {
+        if (!controller.signal.aborted) setLoadedKey(requestKey);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setAvailabilityError({ key: requestKey, message: error.message || "Could not load availability." });
+      });
+    return () => controller.abort();
+  }, [game.id, game.backendBacked, refreshRegistrations, requestKey, registrationsManaged]);
+  const loading = registrationStatus ? registrationStatus.loading : game.backendBacked && loadedKey !== requestKey;
+  const failure = registrationStatus?.error || (availabilityError?.key === requestKey ? availabilityError.message : "");
+  async function respond(value) {
+    if (saving || loading) return;
+    setSaving(true);
+    setAvailabilityError(null);
+    try {
+      await setAvailability(game.id, day.id, value);
+    } catch (error) {
+      setAvailabilityError({ key: requestKey, message: error.message || "Could not save availability. Please try again." });
+    } finally {
+      setSaving(false);
+    }
+  }
   const group = groups.find((item) => item.id === game.groupId);
-  const count = availableCount(day);
+  const count = availableCount(day) + (showParticipants ? (day.guests || []).length : 0);
   return (
     <article className={`game-card ${featured ? "featured" : ""}`}>
       <div className="game-card-top">
@@ -187,9 +232,9 @@ export function GameCard({ game, day = gameDays(game)[0], popular = false, featu
           {new Date(day.date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
         </span>}
       </div>
-      <p className="form-hint">Proposed by <bdi>{day.proposedBy.id === "me" ? user.name : day.proposedBy.name}</bdi></p>
+      {!game.backendBacked && <p className="form-hint">Proposed by <bdi>{day.proposedBy.id === "me" ? user.name : day.proposedBy.name}</bdi></p>}
       <div className="game-card-bottom">
-        <span aria-live="polite"><Icon name="groups" size={18} /><b>{count}</b> {count === 1 ? "member" : "members"} available</span>
+        <span aria-live="polite"><Icon name="groups" size={18} />{guestsLoading ? (guestFailure ? "Participant count unavailable" : "Loading participants...") : <><b>{count}</b> {showParticipants ? (count === 1 ? "participant" : "participants") : `${count === 1 ? "member" : "members"} available`}</>}</span>
         <Link className="circle-arrow" to={`/games/${game.id}?day=${day.id}`} aria-label={`View ${game.title}, ${proposedDate(day.date)}`}><Icon name="arrow" size={20} /></Link>
       </div>
       <div className="rsvp-options availability-options" role="group" aria-label={`Your availability for ${proposedDate(day.date)}`}>
@@ -200,11 +245,18 @@ export function GameCard({ game, day = gameDays(game)[0], popular = false, featu
           <button key={option.value}
             className={`rsvp-button ${day.availability.me === option.value ? `selected ${option.style}` : ""}`}
             aria-pressed={day.availability.me === option.value}
-            onClick={() => setAvailability(game.id, day.id, option.value)}>
+            disabled={loading || saving}
+            onClick={() => respond(option.value)}>
             <Icon name={option.icon} size={18} />{option.label}
           </button>
         ))}
       </div>
+      {loading && !failure && <p className="form-hint" role="status">Loading availability...</p>}
+      {saving && <p className="form-hint" role="status">Saving availability...</p>}
+      {guestFailure && <p className="error" role="alert">{guestFailure}</p>}
+      {guestFailure && <button className="button secondary" onClick={() => setGuestRetry((value) => value + 1)}>Retry guests</button>}
+      {failure && <p className="error" role="alert">{failure}</p>}
+      {failure && loading && <button className="button secondary" onClick={registrationStatus?.retry || (() => setRetry((value) => value + 1))}>Retry</button>}
     </article>
   );
 }
@@ -216,7 +268,7 @@ export function GroupCard({ group }) {
       <GroupImage group={group} />
       <div>
         <h3><bdi>{group.name}</bdi></h3>
-        <p>{group.members.length} {group.members.length === 1 ? "member" : "members"}</p>
+        <p>{group.detailsUnavailable ? "Members unavailable" : `${group.members.length} ${group.members.length === 1 ? "member" : "members"}`}</p>
         <small>
           {proposals.length
             ? `${proposals.length} proposed ${proposals.length === 1 ? "day" : "days"}`

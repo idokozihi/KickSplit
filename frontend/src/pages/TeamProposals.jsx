@@ -1,4 +1,7 @@
 import { useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { loadGame } from "../state/gamesApi";
+import { loadTeamProposals, matchProposalPlayers } from "../state/teamProposalsApi";
 import { useApp } from "../state/context";
 import { goingPlayers, makeProposals, dayGame } from "../state/mock";
 import { Avatar, BackLink, EmptyState, PageHeading } from "../components/UI";
@@ -6,8 +9,34 @@ import { Avatar, BackLink, EmptyState, PageHeading } from "../components/UI";
 export default function TeamProposals() {
   const { gameId } = useParams();
   const [search] = useSearchParams();
-  const { games, groups, user } = useApp();
+  const { games, groups, user, cacheGame } = useApp();
   const source = games.find((item) => item.id === gameId);
+  const [result, setResult] = useState(null);
+  const [retry, setRetry] = useState(0);
+  const backendBacked = source?.backendBacked;
+  const hasGame = Boolean(source);
+  const requestKey = `${gameId}:${retry}`;
+  useEffect(() => {
+    if (hasGame && !backendBacked) return;
+    const controller = new AbortController();
+    async function generate() {
+      if (!hasGame) {
+        const game = await loadGame(gameId, controller.signal);
+        if (!controller.signal.aborted) cacheGame(game);
+        return;
+      }
+      const proposals = await loadTeamProposals(gameId, controller.signal);
+      if (!controller.signal.aborted) setResult({ key: requestKey, proposals });
+    }
+    generate().catch((error) => {
+      if (!controller.signal.aborted) setResult({ key: requestKey, error: error.message || "Could not generate teams. Please try again." });
+    });
+    return () => controller.abort();
+  }, [gameId, hasGame, backendBacked, cacheGame, requestKey]);
+  if ((!source || backendBacked) && result?.key === requestKey && result.error)
+    return <><EmptyState title="Could not generate teams" description={result.error} to={`/games/${gameId}`} action="Back to game" /><button className="button secondary" onClick={() => setRetry((value) => value + 1)}>Try again</button></>;
+  if (!source || (backendBacked && result?.key !== requestKey))
+    return <EmptyState title="Generating teams..." />;
   if (!source)
     return (
       <EmptyState
@@ -19,7 +48,7 @@ export default function TeamProposals() {
     );
   const game = dayGame(source, search.get("day"));
   const players = goingPlayers(game, user);
-  if (players.length < 3)
+  if (!backendBacked && players.length < 3)
     return (
       <EmptyState
         title="A few more players first"
@@ -28,28 +57,31 @@ export default function TeamProposals() {
         action="Back to game"
       />
     );
-  const proposals = makeProposals(players);
+  const proposals = backendBacked ? matchProposalPlayers(result.proposals, players)
+    : makeProposals(players).map((teams) => ({ teams }));
+  const playerCount = backendBacked ? proposals[0].teams.flat().length : players.length;
   const group = groups.find((item) => item.id === game.groupId);
   return (
     <>
       <BackLink to={`/games/${gameId}?day=${game.day.id}`}>Back to game</BackLink>
       <PageHeading
-        eyebrow={<bdi>{group.name}</bdi>}
-        title="Three ways to play."
-        subtitle={<><bdi>{game.title}</bdi> · {players.length} available players, including guests</>}
+        eyebrow={<bdi>{group?.name || game.groupName}</bdi>}
+        title={backendBacked ? "Your team proposals." : "Three ways to play."}
+        subtitle={<><bdi>{game.title}</bdi> · {playerCount} available players, including guests</>}
       />
       <p className="proposal-intro">
-        {players.length === 3
+        {backendBacked ? `${proposals.length} ${proposals.length === 1 ? "balanced lineup" : "balanced lineups"} for ${playerCount} participants. Take a look and find your match.` : players.length === 3
           ? "With three players, each team has one player. Proposals vary which numbered team each player joins."
           : "Same players. Three different lineups. Take a look and find your match."}
       </p>
       <div className="proposals">
-        {proposals.map((teams, index) => (
+        {proposals.map(({ teams, balanceScore }, index) => (
           <section className="proposal" key={index}>
             <header className="proposal-heading">
               <span className="proposal-number">0{index + 1}</span>
               <div>
                 <h2>Proposal {index + 1}</h2>
+                {backendBacked && <small>Balance score: {balanceScore}</small>}
                 <p>
                   {
                     [
@@ -73,11 +105,11 @@ export default function TeamProposals() {
                     <div className="person" key={player.id}>
                       <Avatar
                         name={player.name}
-                        photo={player.id === "me" ? user.photo : undefined}
+                        photo={player.isCurrentUser || player.id === "me" ? user.photo : undefined}
                       />
                       <span>
                         {player.name}
-                        {(player.guest || player.id === "me") && (
+                        {(player.guest || player.isCurrentUser || player.id === "me") && (
                           <small>{player.guest ? "Guest" : "You"}</small>
                         )}
                       </span>
@@ -89,10 +121,7 @@ export default function TeamProposals() {
           </section>
         ))}
       </div>
-      <p className="form-hint">
-        Beta preview · Example lineups only. Skill-based balancing is not
-        connected yet.
-      </p>
+      <p className="form-hint">{backendBacked ? "Teams balanced using player ratings." : "Demo preview · Example lineups only."}</p>
     </>
   );
 }

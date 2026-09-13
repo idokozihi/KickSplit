@@ -1,5 +1,6 @@
 import ProposedDays from "../components/ProposedDays";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { loadGame } from "../state/gamesApi";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useApp } from "../state/context";
 import { goingPlayers, dayGame, gameDays, createMockId } from "../state/mock";
@@ -16,25 +17,83 @@ import {
 export default function Game() {
   const { gameId } = useParams();
   const [search] = useSearchParams();
-  const { games, groups, user, updateGame } = useApp();
+  const { games, groups, user, updateGame, cacheGame, refreshRegistrations, refreshGuests, addBackendGuest } = useApp();
   const [addingGuest, setAddingGuest] = useState(false);
   const [error, setError] = useState("");
   const source = games.find((item) => item.id === gameId);
+  const [loadError, setLoadError] = useState(null);
+  useEffect(() => {
+    if (source) return;
+    const controller = new AbortController();
+    loadGame(gameId, controller.signal)
+      .then((game) => {
+        if (!controller.signal.aborted) cacheGame(game);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setLoadError({ id: gameId, message: error.message || "Could not load game. Please try again." });
+        }
+      });
+    return () => controller.abort();
+  }, [gameId, source, cacheGame]);
+  const backendGameId = source?.backendBacked ? source.id : null;
+  const [registrationResult, setRegistrationResult] = useState(null);
+  const [registrationRetry, setRegistrationRetry] = useState(0);
+  const registrationKey = `${backendGameId}:${user.email}:${registrationRetry}`;
+  useEffect(() => {
+    if (!backendGameId) return;
+    const controller = new AbortController();
+    refreshRegistrations(backendGameId, controller.signal)
+      .then(() => {
+        if (!controller.signal.aborted) setRegistrationResult({ key: registrationKey });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setRegistrationResult({ key: registrationKey, error: error.message || "Could not load availability." });
+      });
+    return () => controller.abort();
+  }, [backendGameId, registrationKey, refreshRegistrations]);
+  const registrationStatus = backendGameId ? {
+    loading: registrationResult?.key !== registrationKey || Boolean(registrationResult?.error),
+    error: registrationResult?.key === registrationKey ? registrationResult.error : "",
+    retry: () => setRegistrationRetry((value) => value + 1),
+  } : undefined;
+  const [guestResult, setGuestResult] = useState(null);
+  const [guestRetry, setGuestRetry] = useState(0);
+  const [savingGuest, setSavingGuest] = useState(false);
+  const guestKey = `${backendGameId}:${guestRetry}`;
+  useEffect(() => {
+    if (!backendGameId) return;
+    const controller = new AbortController();
+    refreshGuests(backendGameId, controller.signal)
+      .then(() => {
+        if (!controller.signal.aborted) setGuestResult({ key: guestKey });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setGuestResult({ key: guestKey, error: error.message || "Could not load guests." });
+      });
+    return () => controller.abort();
+  }, [backendGameId, guestKey, refreshGuests]);
+  const guestError = guestResult?.key === guestKey ? guestResult.error : "";
+  const guestsLoading = Boolean(backendGameId) && guestResult?.key !== guestKey;
+  if (!source && loadError?.id !== gameId)
+    return <EmptyState title="Loading game..." />;
   if (!source)
     return (
       <EmptyState
         title="Game not found"
-        description="This game isn’t in your current demo session."
+        description={loadError.message}
         to="/games"
         action="Your games"
       />
     );
   const game = dayGame(source, search.get("day"));
-  const group = groups.find((item) => item.id === game.groupId);
+  const group = groups.find((item) => item.id === game.groupId)
+    || { id: game.groupId, name: game.groupName || "Your group" };
   const going = goingPlayers(game, user);
   const date = new Date(game.date.includes("T") ? game.date : `${game.date}T00:00:00`);
-  function addGuest(event) {
+  async function addGuest(event) {
     event.preventDefault();
+    if (savingGuest || guestsLoading) return;
     const fields = new FormData(event.currentTarget);
     const name = fields.get("name").trim();
     const rating = Number(fields.get("rating"));
@@ -52,6 +111,19 @@ export default function Game() {
       )
     ) {
       setError("A guest with that name has already been added.");
+      return;
+    }
+    if (source.backendBacked) {
+      setError("");
+      setSavingGuest(true);
+      try {
+        await addBackendGuest(gameId, { name, rating });
+        setAddingGuest(false);
+      } catch (error) {
+        setError(error.message || "Could not add guest. Please try again.");
+      } finally {
+        setSavingGuest(false);
+      }
       return;
     }
     updateGame(gameId, {
@@ -112,14 +184,14 @@ export default function Game() {
       <div className="home-grid">
         <div>
           <Section title="Proposed days">
-            <ProposedDays game={source} allowProposing />
+            <ProposedDays game={source} allowProposing registrationStatus={registrationStatus} showParticipants />
           </Section>
           <Section title={`The lineup · ${going.length} ${going.length === 1 ? "participant" : "participants"}`}>
             <div className="panel participant-panel">
               {going.length ? (
                 <div className="member-grid">
                   {going.map((player) => (
-                    <div className="person" key={player.id}>
+                    <div className="person" key={`${player.guest ? "guest" : "player"}-${player.id}`}>
                       <Avatar name={player.name} photo={player.id === "me" ? user.photo : undefined} />
                       <span>
                         <bdi>{player.name}</bdi>
@@ -141,6 +213,7 @@ export default function Game() {
               <p className="muted">Bringing a friend? Guests join the lineup for this day.</p>
               <button
                 className="button secondary full-width"
+                disabled={guestsLoading || Boolean(guestError) || savingGuest}
                 onClick={() => {
                   setAddingGuest(true);
                   setError("");
@@ -149,6 +222,9 @@ export default function Game() {
                 <Icon name="plus" size={18} />
                 Add guest
               </button>
+              {guestsLoading && <p className="form-hint" role="status">Loading guests...</p>}
+              {guestError && <p className="error" role="alert">{guestError}</p>}
+              {guestError && <button className="button secondary" onClick={() => setGuestRetry((value) => value + 1)}>Retry</button>}
             </div>
           </Section>
           <div className="teams-callout">
@@ -215,8 +291,8 @@ export default function Game() {
                 {error}
               </p>
             )}
-            <button className="button primary">
-              Add guest
+            <button className="button primary" disabled={savingGuest}>
+              {savingGuest ? "Saving..." : "Add guest"}
               <Icon name="plus" size={18} />
             </button>
           </form>

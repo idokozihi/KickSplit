@@ -16,15 +16,17 @@ import { CreateGameForm, RatingFields } from "../components/Forms";
 
 export default function Group() {
   const { groupId } = useParams();
-  const { groups, games, user, updateRatings } = useApp();
+  const { groups, groupsLoading, groupsError, games, user, updateRatings } = useApp();
   const group = groups.find((item) => item.id === groupId);
   const [creating, setCreating] = useState(false);
   const [ratings, setRatings] = useState(null);
+  if (!group && groupsLoading) return <EmptyState title="Loading group..." />;
+  if (!group && groupsError) return <EmptyState title="Could not load group" description={groupsError} to="/groups" action="Your groups" />;
   if (!group)
     return (
       <EmptyState
         title="Group not found"
-        description="This group isn’t in your current demo session."
+        description="This group could not be found on the server."
         to="/groups"
         action="Your groups"
       />
@@ -41,7 +43,7 @@ export default function Group() {
           <p>{group.description}</p>
           <span className="group-member-count">
             <Icon name="groups" size={17} />
-            {group.members.length} {group.members.length === 1 ? "member" : "members"}
+            {group.detailsUnavailable ? "Members unavailable" : `${group.members.length} ${group.members.length === 1 ? "member" : "members"}`}
           </span>
         </div>
       </header>
@@ -68,7 +70,8 @@ export default function Group() {
               />
             )}
           </Section>
-          <Section title={`Members · ${group.members.length}`}>
+          <Section title={group.detailsUnavailable ? "Members" : `Members · ${group.members.length}`}>
+            {group.detailsUnavailable && <p className="form-hint">Member details are currently unavailable.</p>}
             <div className="member-grid">
               {group.members.map((member, index) => (
                 <div className="person" key={index}>
@@ -107,10 +110,11 @@ export default function Group() {
                 ))}
               </div>
               <p className="form-hint">
-                Your self-ratings relative to the players in this group.
+                {group.detailsUnavailable ? "Your ratings are saved when you create or join a group. Viewing and editing saved ratings is currently unavailable." : "Your self-ratings relative to the players in this group."}
               </p>
               <button
                 className="button secondary full-width"
+                disabled={group.detailsUnavailable}
                 onClick={() => setRatings({ ...group.ratings })}
               >
                 Edit group ratings

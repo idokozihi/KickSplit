@@ -4,7 +4,7 @@ import { EmptyState, GroupCard, Icon, PageHeading } from "../components/UI";
 import { GroupFlow } from "../components/Forms";
 
 export default function Groups() {
-  const { groups } = useApp();
+  const { groups, groupsLoading, groupsError } = useApp();
   const [flow, setFlow] = useState(null);
   return (
     <>
@@ -30,13 +30,14 @@ export default function Groups() {
           </div>
         }
       />
-      {groups.length ? (
+      {groupsError && <p className="error" role="alert">{groupsError}</p>}
+      {groupsLoading ? <EmptyState title="Loading groups..." /> : groups.length ? (
         <div className="cards-grid">
           {groups.map((group) => (
             <GroupCard key={group.id} group={group} />
           ))}
         </div>
-      ) : (
+      ) : !groupsError && (
         <EmptyState
           title="Build your football circle"
           description="Create a group for your friends, or join an existing crew with an invite code."

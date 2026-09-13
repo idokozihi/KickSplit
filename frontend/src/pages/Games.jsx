@@ -9,7 +9,7 @@ import {
 } from "../components/UI";
 
 export default function Games() {
-  const { games } = useApp();
+  const { games, gamesLoading, gamesError, groupsError } = useApp();
   const scheduled = rankedDaysByGroup(games);
   return (
     <>
@@ -21,13 +21,14 @@ export default function Games() {
       <Section
         title={`Proposed days${scheduled.length ? ` · ${scheduled.length}` : ""}`}
       >
-        {scheduled.length ? (
+        {(gamesError || groupsError) && <p className="error" role="alert">{gamesError || groupsError}</p>}
+        {gamesLoading ? <EmptyState title="Loading games..." /> : scheduled.length ? (
           <div className="cards-grid">
             {scheduled.map(({ game, day, popular }) => (
-              <GameCard game={game} day={day} popular={popular} key={`${game.id}-${day.id}`} />
+              <GameCard game={game} day={day} popular={popular} showParticipants loadGuestList={game.backendBacked} key={`${game.id}-${day.id}`} />
             ))}
           </div>
-        ) : (
+        ) : !gamesError && !groupsError && (
           <EmptyState
             title="An open calendar, for now"
             description="Join a group or create a game from your group page."

@@ -4,35 +4,52 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { initialState, goingPlayers, makeProposals, upcoming } from "./mock.js";
 import { rankedDaysByGroup } from "./mock.js";
-import { createMockId, createProposedDay, availableCount, mostPopularDays, respondToDay, proposedDate, rankedDays, gameDays, dayGame } from "./mock.js";
+import { createProposedDay, availableCount, mostPopularDays, respondToDay, proposedDate, rankedDays, gameDays, dayGame } from "./mock.js";
 
-test("creation submits, closes, and navigates even without crypto.randomUUID", (t) => {
-  t.mock.getter(globalThis, "crypto", () => ({}));
-  // Exercise the actual form handler without adding a DOM test dependency.
+test("creation waits for saving and navigates using the backend ID", async () => {
   const source = readFileSync(new URL("../components/Forms.jsx", import.meta.url), "utf8");
   const form = source.slice(source.indexOf("export function CreateGameForm"));
-  const handler = form.slice(form.indexOf("  function submit(event)"), form.indexOf("\n  return ("));
+  const handler = form.slice(form.indexOf("  async function submit(event)"), form.indexOf("\n  return ("));
   const calls = [];
-  const fields = new Map([["title", "Friday football"], ["date", "2026-09-18"], ["target", "15"]]);
+  const fields = new Map([["title", " Friday football "], ["date", "2026-09-18"], ["target", "15"]]);
+  let complete;
+  const pending = new Promise((resolve) => { complete = resolve; });
   const submit = runInNewContext(`${handler}\nsubmit`, {
-    crypto: {}, createMockId, createProposedDay,
     FormData: class { get(key) { return fields.get(key); } },
-    user: { name: "Alex" }, groupId: "thursday",
-    setError: (message) => assert.fail(message),
-    addGame: (game) => calls.push(["save", game]),
+    groupId: "7", saving: false,
+    setSaving: (value) => calls.push(["saving", value]),
+    setError: (message) => { if (message) assert.fail(message); },
+    addGame: (game) => { calls.push(["save", game]); return pending; },
     onClose: () => calls.push(["close"]),
     navigate: (path) => calls.push(["navigate", path]),
   });
-  submit({ preventDefault() {}, currentTarget: {} });
-  assert.deepEqual(calls.map(([action]) => action), ["save", "close", "navigate"]);
-  const game = calls[0][1];
-  assert.equal(game.title, "Friday football");
-  assert.equal(game.target, 15);
-  assert.equal(game.groupId, "thursday");
-  assert.equal(game.proposedDays.length, 1);
-  assert.equal(game.proposedDays[0].date, "2026-09-18");
-  assert.notEqual(game.id, game.proposedDays[0].id);
-  assert.equal(calls[2][1], `/games/${game.id}`);
+  const submitted = submit({ preventDefault() {}, currentTarget: {} });
+  assert.deepEqual(calls.map(([action]) => action), ["saving", "save"]);
+  assert.equal(calls[1][1].title, "Friday football");
+  assert.equal(calls[1][1].target, 15);
+  complete({ id: "42" });
+  await submitted;
+  assert.deepEqual(calls.slice(2), [["close"], ["navigate", "/games/42"], ["saving", false]]);
+});
+
+test("failed creation stays on the form and clears saving", async () => {
+  const source = readFileSync(new URL("../components/Forms.jsx", import.meta.url), "utf8");
+  const form = source.slice(source.indexOf("export function CreateGameForm"));
+  const handler = form.slice(form.indexOf("  async function submit(event)"), form.indexOf("\n  return ("));
+  const errors = [], savingStates = [];
+  const fields = new Map([["title", "Football"], ["date", "2026-09-18"], ["target", "15"]]);
+  const submit = runInNewContext(`${handler}\nsubmit`, {
+    FormData: class { get(key) { return fields.get(key); } },
+    groupId: "7", saving: false,
+    setSaving: (value) => savingStates.push(value),
+    setError: (message) => errors.push(message),
+    addGame: async () => { throw new Error("Server unavailable"); },
+    onClose: () => assert.fail("Must stay open"),
+    navigate: () => assert.fail("Must not navigate"),
+  });
+  await submit({ preventDefault() {}, currentTarget: {} });
+  assert.deepEqual(errors, ["", "Server unavailable"]);
+  assert.deepEqual(savingStates, [true, false]);
 });
 
 test("a member explicitly proposes one day without a time or inferred response", () => {

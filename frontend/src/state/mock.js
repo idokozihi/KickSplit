@@ -165,7 +165,7 @@ export function mostPopularDays(days) {
 }
 // Adapt existing demo dates and responses; no additional dates are generated.
 export function gameDays(game) {
-  if (game.proposedDays) return game.proposedDays;
+  if (game.proposedDays && !game.backendBacked) return game.proposedDays;
   const response = (status) => status === "GOING" ? "AVAILABLE"
     : status === "NOT_GOING" ? "UNAVAILABLE" : null;
   return [{
