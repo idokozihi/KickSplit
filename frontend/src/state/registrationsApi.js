@@ -1,11 +1,13 @@
+import { apiUrl } from "./apiBase.js";
+
 export async function loadRegistrations(gameId, signal) {
-  const response = await fetch(`/api/registrations/game/${encodeURIComponent(gameId)}`, { signal });
+  const response = await fetch(apiUrl(`/registrations/game/${encodeURIComponent(gameId)}`), { signal });
   if (!response.ok) throw new Error(`Could not load availability (${response.status}). Please try again.`);
   return response.json();
 }
 
 export async function saveRegistration(gameId, userId, status) {
-  const response = await fetch(`/api/registrations/game/${encodeURIComponent(gameId)}`, {
+  const response = await fetch(apiUrl(`/registrations/game/${encodeURIComponent(gameId)}`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userId: Number(userId), status }),

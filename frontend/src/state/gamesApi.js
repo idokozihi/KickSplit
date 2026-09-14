@@ -1,5 +1,7 @@
+import { apiUrl } from "./apiBase.js";
+
 export async function createGame({ groupId, title, date, target }) {
-  const response = await fetch("/api/games", {
+  const response = await fetch(apiUrl("/games"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -17,7 +19,7 @@ export async function createGame({ groupId, title, date, target }) {
 }
 
 export async function loadGame(id, signal) {
-  const response = await fetch(`/api/games/${encodeURIComponent(id)}`, { signal });
+  const response = await fetch(apiUrl(`/games/${encodeURIComponent(id)}`), { signal });
   if (!response.ok) {
     throw new Error(`Could not load game (${response.status}). Please try again.`);
   }
@@ -25,7 +27,7 @@ export async function loadGame(id, signal) {
 }
 
 export async function loadGroupGames(groupId, signal) {
-  const response = await fetch(`/api/games/group/${encodeURIComponent(groupId)}`, { signal });
+  const response = await fetch(apiUrl(`/games/group/${encodeURIComponent(groupId)}`), { signal });
   if (!response.ok) {
     throw new Error(`Could not load games for group ${groupId} (${response.status}). Please try again.`);
   }

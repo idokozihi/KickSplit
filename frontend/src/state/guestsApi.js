@@ -1,15 +1,17 @@
+import { apiUrl } from "./apiBase.js";
+
 function mapGuest(dto) {
   return { ...dto, id: String(dto.id), gameId: String(dto.gameId), addedByUserId: String(dto.addedByUserId) };
 }
 
 export async function loadGuests(gameId, signal) {
-  const response = await fetch(`/api/guests/game/${encodeURIComponent(gameId)}`, { signal });
+  const response = await fetch(apiUrl(`/guests/game/${encodeURIComponent(gameId)}`), { signal });
   if (!response.ok) throw new Error(`Could not load guests (${response.status}). Please try again.`);
   return (await response.json()).map(mapGuest);
 }
 
 export async function saveGuest(gameId, { name, rating }, addedByUserId) {
-  const response = await fetch(`/api/guests/game/${encodeURIComponent(gameId)}`, {
+  const response = await fetch(apiUrl(`/guests/game/${encodeURIComponent(gameId)}`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, rating, addedByUserId: Number(addedByUserId) }),

@@ -1,5 +1,7 @@
+import { apiUrl } from "./apiBase.js";
+
 async function request(path, options = {}) {
-  const response = await fetch(`/api${path}`, options);
+  const response = await fetch(apiUrl(path), options);
   if (!response.ok) {
     throw new Error(`Could not ${options.method === "POST" ? "save" : "load"} group data (${response.status}). Please try again.`);
   }

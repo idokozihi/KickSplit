@@ -1,4 +1,27 @@
-# React + Vite
+# KickSplit frontend
+
+## API configuration and deployment
+
+For local development, leave `VITE_API_BASE_URL` unset or empty (see `.env.example`)
+and run `npm run dev`. Requests use `/api` and the existing Vite proxy forwards
+them to `http://localhost:8080`.
+
+For production, set this environment variable in the frontend hosting service
+before running `npm run build`:
+
+```dotenv
+VITE_API_BASE_URL=https://kicksplit.onrender.com
+```
+
+Use the backend origin without `/api`; the shared API helper adds that prefix.
+Trailing slashes are removed. For example, groups requests go to
+`https://kicksplit.onrender.com/api/groups`. Vite embeds the value at build time,
+so rebuild after changing it. Publish the generated `dist` directory.
+The backend must allow the deployed frontend origin through CORS.
+
+Run `npm test`, `npm run lint`, and `npm run build` to validate the frontend.
+
+## Vite template notes
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

@@ -1,5 +1,7 @@
+import { apiUrl } from "./apiBase.js";
+
 export async function loadTeamProposals(gameId, signal) {
-  const response = await fetch(`/api/team-proposals/game/${encodeURIComponent(gameId)}`, { signal });
+  const response = await fetch(apiUrl(`/team-proposals/game/${encodeURIComponent(gameId)}`), { signal });
   if (!response.ok) throw new Error(`Could not generate teams (${response.status}). Please try again.`);
   const proposals = await response.json();
   if (!Array.isArray(proposals) || proposals.length < 1 || proposals.length > 3
