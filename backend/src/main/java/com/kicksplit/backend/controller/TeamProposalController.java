@@ -1,15 +1,14 @@
 package com.kicksplit.backend.controller;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.kicksplit.backend.service.TeamProposalService;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.kicksplit.backend.algorithm.TeamProposal;
+import com.kicksplit.backend.dto.TeamProposalResponseDto;
+import com.kicksplit.backend.service.TeamProposalService;
 
 @RestController
 @RequestMapping("/api/team-proposals")
@@ -22,7 +21,7 @@ public class TeamProposalController {
     }
 
     @GetMapping("/game/{gameId}")
-    public List<TeamProposal> generateProposals(@PathVariable Long gameId) {
-        return teamProposalService.generateProposals(gameId);
+    public List<TeamProposalResponseDto> getProposals(@PathVariable Long gameId) {
+        return teamProposalService.getOrGenerateProposals(gameId);
     }
 }

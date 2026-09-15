@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { loadGame } from "../state/gamesApi";
 import { loadTeamProposals, matchProposalPlayers } from "../state/teamProposalsApi";
 import { useApp } from "../state/context";
+import { useVotes } from "../state/useVotes";
+import { proposalVoteState } from "../state/votesApi";
 import { goingPlayers, makeProposals, dayGame } from "../state/mock";
 import { Avatar, BackLink, EmptyState, PageHeading } from "../components/UI";
 
@@ -14,6 +16,7 @@ export default function TeamProposals() {
   const [result, setResult] = useState(null);
   const [retry, setRetry] = useState(0);
   const backendBacked = source?.backendBacked;
+  const voting = useVotes(gameId, user, backendBacked);
   const hasGame = Boolean(source);
   const requestKey = `${gameId}:${retry}`;
   useEffect(() => {
@@ -74,13 +77,21 @@ export default function TeamProposals() {
           ? "With three players, each team has one player. Proposals vary which numbered team each player joins."
           : "Same players. Three different lineups. Take a look and find your match."}
       </p>
+      {backendBacked && <div aria-live="polite">
+        {voting.loading && <p>Loading votes...</p>}
+        {voting.error && <p role="alert">{voting.error} <button className="button secondary" onClick={voting.retry}>Retry votes</button></p>}
+        {voting.saveError && <p role="alert">{voting.saveError}</p>}
+        {voting.saving && <p>Saving vote...</p>}
+      </div>}
       <div className="proposals">
-        {proposals.map(({ teams, balanceScore }, index) => (
-          <section className="proposal" key={index}>
+        {proposals.map(({ id, proposalNumber, teams, balanceScore }, index) => {
+          const { count, selected } = proposalVoteState(voting.votes || [], id, voting.userId);
+          return (
+          <section className="proposal" key={backendBacked ? id : index}>
             <header className="proposal-heading">
-              <span className="proposal-number">0{index + 1}</span>
+              <span className="proposal-number">{String(proposalNumber ?? index + 1).padStart(2, "0")}</span>
               <div>
-                <h2>Proposal {index + 1}</h2>
+                <h2>Proposal {proposalNumber ?? index + 1}</h2>
                 {backendBacked && <small>Balance score: {balanceScore}</small>}
                 <p>
                   {
@@ -118,8 +129,18 @@ export default function TeamProposals() {
                 </div>
               ))}
             </div>
+            {backendBacked && <div className="section-heading">
+              <span aria-live="polite">{voting.votes ? `${count} ${count === 1 ? "vote" : "votes"}` : "Votes unavailable"}</span>
+              <button className={`button ${selected ? "secondary" : "primary"}`}
+                aria-pressed={selected}
+                aria-label={`${selected ? "Voted for" : "Vote for"} proposal ${proposalNumber ?? index + 1}`}
+                disabled={!voting.votes || voting.saving || selected}
+                onClick={() => voting.vote(id)}>
+                {selected ? "✓ Voted" : "Vote"}
+              </button>
+            </div>}
           </section>
-        ))}
+        ); })}
       </div>
       <p className="form-hint">{backendBacked ? "Teams balanced using player ratings." : "Demo preview · Example lineups only."}</p>
     </>

@@ -8,12 +8,14 @@ test("loads one to three real proposals with balance scores", async (t) => {
   t.mock.method(globalThis, "fetch", async (url, options) => {
     assert.equal(url, "/api/team-proposals/game/42");
     assert.equal(options.signal, signal);
-    return { ok: true, json: async () => Array.from({ length: count }, () => ({ teams: [[{ name: "Alex", rating: 3 }], [], []], balanceScore: 1.5 })) };
+    return { ok: true, json: async () => Array.from({ length: count }, (_, index) => ({ id: 901 + index, proposalNumber: index + 1, teams: [[{ name: "Alex", rating: 3 }], [], []], balanceScore: 1.5 })) };
   });
   for (count = 1; count <= 3; count++) {
     const proposals = await loadTeamProposals("42", signal);
     assert.equal(proposals.length, count);
     assert.equal(proposals[0].balanceScore, 1.5);
+    assert.equal(matchProposalPlayers(proposals, [])[0].id, 901);
+    assert.equal(matchProposalPlayers(proposals, [])[0].proposalNumber, 1);
   }
 });
 
