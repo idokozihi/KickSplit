@@ -18,6 +18,8 @@ import com.kicksplit.backend.repository.GroupMemberRepository;
 import com.kicksplit.backend.repository.RegistrationRepository;
 import com.kicksplit.backend.repository.StoredTeamProposalRepository;
 import com.kicksplit.backend.repository.UserRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class GameResultService {
@@ -125,13 +127,15 @@ public class GameResultService {
 
     public GameResultResponseDto getResult(Long gameId) {
 
-        GameResult result = gameResultRepository
-                .findByGame_Id(gameId)
-                .orElseThrow(() ->
-                        new RuntimeException("Game result not found"));
+    GameResult result = gameResultRepository
+            .findByGame_Id(gameId)
+            .orElseThrow(() ->
+                    new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Game result not found"));
 
-        return toDto(result);
-    }
+    return toDto(result);
+}
 
     private GameResultResponseDto toDto(GameResult result) {
 
