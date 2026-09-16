@@ -5,18 +5,22 @@ import { createGame, loadGroupGames, mergeGames } from "./gamesApi";
 import { loadGuests, saveGuest, mergeGuests } from "./guestsApi";
 import { MockContext } from "./context";
 import { initialState, createProposedDay, respondToDay, gameDays } from "./mock";
+import { loginUser, registerUser } from "./authApi";
 
 export default function MockProvider({ children }) {
   const [data, setData] = useState(() => {
-    const initial = { ...initialState(), groups: [] };
+    const initial = { ...initialState(), user: null, groups: [] };
     try {
       const profile = JSON.parse(sessionStorage.getItem("kicksplit-profile"));
-      if (profile?.email) initial.user = profile;
-    } catch { /* Keep the demo profile when session storage is unavailable. */ }
+      if (Number.isInteger(profile?.id) && profile.email) initial.user = profile;
+    } catch { /* Start logged out when session storage is unavailable. */ }
     return initial;
   });
   useEffect(() => {
-    try { sessionStorage.setItem("kicksplit-profile", JSON.stringify(data.user)); }
+    try {
+      if (data.user) sessionStorage.setItem("kicksplit-profile", JSON.stringify(data.user));
+      else sessionStorage.removeItem("kicksplit-profile");
+    }
     catch { /* The current session can still use the profile in memory. */ }
   }, [data.user]);
   const [groupsLoading, setGroupsLoading] = useState(true);
@@ -56,16 +60,16 @@ export default function MockProvider({ children }) {
       ...current,
       user: { ...current.user, ...updates },
     }));
-  const login = (email) => {
-    const demo = initialState();
-    setData((current) => ({ ...demo, groups: current.groups, games: current.games, user: { ...demo.user, email } }));
+  const login = async (email, password) => {
+    const user = await loginUser(email, password);
+    setData((current) => ({ ...current, user }));
+    return user;
   };
-  const register = (name, email) =>
-    setData((current) => ({
-      user: { name, email, username: "", photo: "" },
-      groups: current.groups,
-      games: current.games,
-    }));
+  const register = async (name, email, password) => {
+    const user = await registerUser(name, email, password);
+    setData((current) => ({ ...current, user }));
+    return user;
+  };
   const addGroup = async (input) => {
     const group = await saveGroup(input, data.user);
     setData((current) => ({ ...current, groups: [...current.groups.filter((item) => item.id !== group.id), group] }));

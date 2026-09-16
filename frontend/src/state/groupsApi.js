@@ -35,29 +35,11 @@ export async function loadGroups(signal) {
   return (await request("/groups", { signal })).map(mapGroup);
 }
 
-const pendingUsers = new Map();
-
 export function resolveBackendUser(user) {
-  // Multiple game cards (and StrictMode) can resolve the same profile at once.
-  if (!pendingUsers.has(user.email)) {
-    pendingUsers.set(user.email, findOrCreateUser(user).finally(() => pendingUsers.delete(user.email)));
+  if (!Number.isInteger(user?.id)) {
+    throw new Error("Please log in to continue.");
   }
-  return pendingUsers.get(user.email);
-}
-
-async function findOrCreateUser(user) {
-  // The current frontend login is a demo profile, not a backend user session.
-  const users = await request("/users");
-  let creator = users.find((item) => item.email === user.email);
-  if (!creator) {
-    creator = await post("/users", {
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      imageUrl: user.photo || null,
-    });
-  }
-  return creator;
+  return Promise.resolve(user);
 }
 
 export async function saveGroup({ name, image, ratings, inviteToken }, user) {

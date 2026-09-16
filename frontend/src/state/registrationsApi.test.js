@@ -51,14 +51,11 @@ test("registration errors reject without producing successful state", async (t) 
   await assert.rejects(saveRegistration("42", 7, "AVAILABLE"), /Failed to fetch/);
 });
 
-test("concurrent profile lookups reuse the Groups mechanism and create only one backend user", async (t) => {
-  const calls = [];
-  t.mock.method(globalThis, "fetch", async (url, options) => {
-    calls.push([url, options.method]);
-    return { ok: true, json: async () => options.method === "POST" ? { id: 7 } : [] };
-  });
-  const profile = { name: "Alex", email: "alex@example.com" };
+test("backend user resolution uses the authenticated id without network calls", async (t) => {
+  t.mock.method(globalThis, "fetch", () => { throw new Error("Unexpected request"); });
+  const profile = { id: 7, name: "Alex", email: "alex@example.com" };
   const result = await Promise.all([resolveBackendUser(profile), resolveBackendUser(profile)]);
-  assert.deepEqual(result, [{ id: 7 }, { id: 7 }]);
-  assert.deepEqual(calls, [["/api/users", undefined], ["/api/users", "POST"]]);
+  assert.deepEqual(result, [profile, profile]);
+  assert.equal(globalThis.fetch.mock.callCount(), 0);
+  assert.throws(() => resolveBackendUser({ email: profile.email }), /Please log in/);
 });

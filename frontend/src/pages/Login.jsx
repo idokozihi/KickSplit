@@ -6,9 +6,10 @@ import { useApp } from "../state/context";
 export default function Login() {
   const [signup, setSignup] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const { login, register } = useApp();
   const navigate = useNavigate();
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
     if (signup && fields.get("password") !== fields.get("confirm")) {
@@ -19,12 +20,20 @@ export default function Login() {
       setError("Please enter your name.");
       return;
     }
-    if (signup) {
-      register(fields.get("name").trim(), fields.get("email").trim());
-      navigate("/profile-setup");
-    } else {
-      login(fields.get("email").trim());
-      navigate("/home");
+    setError("");
+    setSubmitting(true);
+    try {
+      if (signup) {
+        await register(fields.get("name").trim(), fields.get("email").trim(), fields.get("password"));
+        navigate("/profile-setup");
+      } else {
+        await login(fields.get("email").trim(), fields.get("password"));
+        navigate("/home");
+      }
+    } catch (failure) {
+      setError(failure.message || "Authentication failed. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   }
   return (
@@ -144,19 +153,11 @@ export default function Login() {
                 {error}
               </p>
             )}
-            <button className="button primary">
+            <button className="button primary" disabled={submitting}>
               {signup ? "Create account" : "Let’s play"}
               <Icon name="arrow" size={19} />
             </button>
           </form>
-          <div className="demo-note">
-            <span className="live-dot" />
-            <p>
-              Explore the beta. Log in with any email and a password of 6+
-              characters for a demo account. Sign up to start fresh. Changes
-              last until you refresh.
-            </p>
-          </div>
         </div>
       </section>
     </div>
