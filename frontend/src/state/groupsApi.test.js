@@ -1,6 +1,23 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadGroups, saveGroup } from "./groupsApi.js";
+import { loadGroups, loadInviteToken, saveGroup } from "./groupsApi.js";
+
+test("admins request an invite token for their group and backend user id", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url) => {
+    assert.equal(url, "/api/groups/42/invite-token/7");
+    return { ok: true, json: async () => ({ inviteToken: "token/with space" }) };
+  });
+  assert.equal(await loadInviteToken(42, 7), "token/with space");
+});
+
+test("invite token access failures return useful errors", async (t) => {
+  const mocked = t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 403 }));
+  await assert.rejects(loadInviteToken(42, 7), /Only group admins/);
+  mocked.mock.mockImplementation(async () => { throw new TypeError("Failed to fetch"); });
+  await assert.rejects(loadInviteToken(42, 7), /Could not connect/);
+  mocked.mock.mockImplementation(async () => ({ ok: false, status: 500, json: async () => ({ message: "Only group admins can access the invite code" }) }));
+  await assert.rejects(loadInviteToken(42, 7), /Only group admins/);
+});
 
 test("create uses a real creator ID and server ID survives a fresh load", async (t) => {
   const calls = [];
@@ -27,10 +44,24 @@ test("joining uses the authenticated user id and real token", async (t) => {
     calls.push({ url, options });
     return { ok: true, json: async () => ({ id: 42, name: "Friday FC" }) };
   });
-  await saveGroup({ inviteToken: "a/b", ratings: { overall: 3, attack: 3, defense: 3 } }, { id: 9, name: "Player", email: "new@example.com" });
+  await saveGroup({ inviteToken: "a/b", ratings: { overall: 4, attack: 2, defense: 5 } }, { id: 9, name: "Player", email: "new@example.com" });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "/api/groups/join/a%2Fb");
-  assert.equal(JSON.parse(calls[0].options.body).userId, 9);
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    userId: 9, selfOverallRating: 4, selfAttackRating: 2, selfDefenseRating: 5,
+  });
+});
+
+test("join errors identify invalid links and existing membership", async (t) => {
+  const mocked = t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 404 }));
+  const input = { inviteToken: "expired", ratings: { overall: 3, attack: 3, defense: 3 } };
+  await assert.rejects(saveGroup(input, { id: 9 }), /invalid or has expired/);
+  mocked.mock.mockImplementation(async () => ({ ok: false, status: 409 }));
+  await assert.rejects(saveGroup(input, { id: 9 }), /already a member/);
+  mocked.mock.mockImplementation(async () => { throw new TypeError("Failed to fetch"); });
+  await assert.rejects(saveGroup(input, { id: 9 }), /Could not connect/);
+  mocked.mock.mockImplementation(async () => ({ ok: false, status: 500, json: async () => ({ message: "User is already a member of this group" }) }));
+  await assert.rejects(saveGroup(input, { id: 9 }), /already a member/);
 });
 
 test("failed requests reject instead of returning a demo group", async (t) => {

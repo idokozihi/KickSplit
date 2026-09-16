@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Brand, Icon } from "../components/UI";
 import { useApp } from "../state/context";
+import { destinationAfterAuth, pendingInvite } from "../state/invite";
 
 export default function Login() {
   const [signup, setSignup] = useState(false);
@@ -9,6 +10,8 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
   const { login, register } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = pendingInvite(location.state?.from);
   async function submit(event) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
@@ -25,10 +28,10 @@ export default function Login() {
     try {
       if (signup) {
         await register(fields.get("name").trim(), fields.get("email").trim(), fields.get("password"));
-        navigate("/profile-setup");
+        navigate(destinationAfterAuth(returnTo, true), { state: { from: returnTo } });
       } else {
         await login(fields.get("email").trim(), fields.get("password"));
-        navigate("/home");
+        navigate(destinationAfterAuth(returnTo));
       }
     } catch (failure) {
       setError(failure.message || "Authentication failed. Please try again.");

@@ -13,6 +13,8 @@ import {
   Section,
 } from "../components/UI";
 import { CreateGameForm, RatingFields } from "../components/Forms";
+import { loadInviteToken } from "../state/groupsApi";
+import { inviteUrl } from "../state/invite";
 
 export default function Group() {
   const { groupId } = useParams();
@@ -20,6 +22,35 @@ export default function Group() {
   const group = groups.find((item) => item.id === groupId);
   const [creating, setCreating] = useState(false);
   const [ratings, setRatings] = useState(null);
+  const [inviting, setInviting] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const [inviteError, setInviteError] = useState("");
+  const [copied, setCopied] = useState(false);
+  async function openInvite() {
+    setInviting(true);
+    setInviteLoading(true);
+    setInviteError("");
+    setInviteLink("");
+    setCopied(false);
+    try {
+      const token = await loadInviteToken(groupId, user.id);
+      setInviteLink(inviteUrl(token, window.location.origin));
+    } catch (failure) {
+      setInviteError(failure.message || "Could not get an invite link. Please try again.");
+    } finally {
+      setInviteLoading(false);
+    }
+  }
+  async function copyInvite() {
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      setInviteError("");
+    } catch {
+      setInviteError("Could not copy the link. Select and copy it manually.");
+    }
+  }
   if (!group && groupsLoading) return <EmptyState title="Loading group..." />;
   if (!group && groupsError) return <EmptyState title="Could not load group" description={groupsError} to="/groups" action="Your groups" />;
   if (!group)
@@ -47,6 +78,7 @@ export default function Group() {
           </span>
         </div>
       </header>
+      <button className="button secondary" onClick={openInvite}>Invite players</button>
       <div className="home-grid">
         <div>
           <Section title="Proposed days">
@@ -125,6 +157,19 @@ export default function Group() {
       </div>
       {creating && (
         <CreateGameForm groupId={groupId} onClose={() => setCreating(false)} />
+      )}
+      {inviting && (
+        <Modal title="Invite players" onClose={() => setInviting(false)}>
+          {inviteLoading && <p className="muted">Getting invite link...</p>}
+          {inviteLink && (
+            <div className="form">
+              <label>Invite link<input value={inviteLink} readOnly onFocus={(event) => event.currentTarget.select()} /></label>
+              <button className="button primary" onClick={copyInvite}>Copy link</button>
+              {copied && <p className="success" role="status">Link copied.</p>}
+            </div>
+          )}
+          {inviteError && <p className="error" role="alert">{inviteError}</p>}
+        </Modal>
       )}
       {ratings && (
         <Modal title="Your group ratings" onClose={() => setRatings(null)}>

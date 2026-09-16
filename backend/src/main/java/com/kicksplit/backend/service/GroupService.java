@@ -13,6 +13,7 @@ import com.kicksplit.backend.entity.User;
 import com.kicksplit.backend.repository.GroupMemberRepository;
 import com.kicksplit.backend.repository.GroupRepository;
 import com.kicksplit.backend.repository.UserRepository;
+import java.util.UUID;
 
 @Service
 public class GroupService {
@@ -40,6 +41,7 @@ public class GroupService {
         Group group = new Group(
                 request.getName(),
                 request.getImageUrl());
+                group.setInviteToken(UUID.randomUUID().toString());
 
         Group savedGroup = groupRepository.save(group);
 
@@ -97,5 +99,26 @@ public class GroupService {
 
         return group;
     }
+
+    @Transactional
+      public String getInviteToken(Long groupId, Long userId) {
+
+    GroupMember membership = groupMemberRepository
+            .findByUser_IdAndGroup_Id(userId, groupId)
+            .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
+
+    if (!membership.isAdmin()) {
+        throw new RuntimeException("Only group admins can access the invite code");
+    }
+
+    Group group = membership.getGroup();
+
+    if (group.getInviteToken() == null) {
+        group.setInviteToken(UUID.randomUUID().toString());
+        groupRepository.save(group);
+    }
+
+    return group.getInviteToken();
+}
 
 }

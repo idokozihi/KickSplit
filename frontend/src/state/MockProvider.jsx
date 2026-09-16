@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { loadGroups, saveGroup, resolveBackendUser } from "./groupsApi";
 import { loadRegistrations, saveRegistration, registrationState } from "./registrationsApi";
 import { createGame, loadGroupGames, mergeGames } from "./gamesApi";
@@ -17,6 +17,7 @@ export default function MockProvider({ children }) {
     } catch { /* Start logged out when session storage is unavailable. */ }
     return initial;
   });
+  const activeUserId = useRef(data.user?.id);
   useEffect(() => {
     try {
       if (data.user) sessionStorage.setItem("kicksplit-profile", JSON.stringify(data.user));
@@ -35,7 +36,10 @@ export default function MockProvider({ children }) {
     loadGroups(userId, controller.signal)
       .then(async (groups) => {
         if (controller.signal.aborted) return;
-        setData((current) => current.user?.id === userId ? { ...current, groups } : current);
+        setData((current) => current.user?.id === userId ? {
+          ...current,
+          groups: [...groups.filter((group) => !current.groups.some((item) => item.id === group.id)), ...current.groups],
+        } : current);
         setGroupsLoading(false);
         const results = await Promise.allSettled(groups.map((group) => loadGroupGames(group.id, controller.signal)));
         if (controller.signal.aborted) return;
@@ -58,6 +62,7 @@ export default function MockProvider({ children }) {
     return () => controller.abort();
   }, [userId]);
   const setAuthenticatedUser = (user) => {
+    activeUserId.current = user.id;
     if (data.user?.id !== user.id) {
       setGroupsLoading(true);
       setGamesLoading(true);
@@ -82,8 +87,12 @@ export default function MockProvider({ children }) {
     return user;
   };
   const addGroup = async (input) => {
-    const group = await saveGroup(input, data.user);
-    setData((current) => ({ ...current, groups: [...current.groups.filter((item) => item.id !== group.id), group] }));
+    const user = data.user;
+    const group = await saveGroup(input, user);
+    if (activeUserId.current !== user?.id) throw new Error("Your account changed. Please try again.");
+    setData((current) => current.user?.id === user.id
+      ? { ...current, groups: [...current.groups.filter((item) => item.id !== group.id), group] }
+      : current);
     return group;
   };
   const updateRatings = (id, ratings) =>

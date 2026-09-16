@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import com.kicksplit.backend.dto.GroupResponseDto;
 import com.kicksplit.backend.dto.JoinGroupRequest;
+import com.kicksplit.backend.dto.InviteTokenResponse;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -55,6 +56,15 @@ public class GroupController {
                 .stream()
                 .map(GroupResponseDto::fromGroup)
                 .toList();
+    }
+
+    @GetMapping("/{groupId}/invite-token/{userId}")
+    public InviteTokenResponse getInviteToken(
+            @PathVariable Long groupId,
+            @PathVariable Long userId) {
+
+        String token = groupService.getInviteToken(groupId, userId);
+        return new InviteTokenResponse(token);
     }
 
     @PostMapping("/join/{inviteToken}")
