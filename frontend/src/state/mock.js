@@ -104,11 +104,11 @@ export const demoUser = {
   email: "alex@example.com",
   photo: "",
 };
-export function initialState() {
+export function initialState({ includeDemoGames = true } = {}) {
   return {
     user: demoUser,
     groups: structuredClone(demoGroups),
-    games: seedGames(),
+    games: includeDemoGames ? seedGames() : [],
   };
 }
 export function upcoming(games) {

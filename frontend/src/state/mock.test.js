@@ -6,6 +6,12 @@ import { initialState, goingPlayers, makeProposals, upcoming } from "./mock.js";
 import { rankedDaysByGroup } from "./mock.js";
 import { createProposedDay, availableCount, mostPopularDays, respondToDay, proposedDate, rankedDays, gameDays, dayGame } from "./mock.js";
 
+test("production starts without demo games while development keeps seed games", () => {
+  assert.deepEqual(initialState({ includeDemoGames: false }).games, []);
+  assert.ok(initialState({ includeDemoGames: true }).games.some((game) => game.title === "Under the lights"));
+  assert.ok(initialState().games.length > 0);
+});
+
 test("creation waits for saving and navigates using the backend ID", async () => {
   const source = readFileSync(new URL("../components/Forms.jsx", import.meta.url), "utf8");
   const form = source.slice(source.indexOf("export function CreateGameForm"));

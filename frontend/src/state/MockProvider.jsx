@@ -9,7 +9,7 @@ import { loginUser, registerUser } from "./authApi";
 
 export default function MockProvider({ children }) {
   const [data, setData] = useState(() => {
-    const initial = { ...initialState(), user: null, groups: [] };
+    const initial = { ...initialState({ includeDemoGames: !import.meta.env.PROD }), user: null, groups: [] };
     try {
       const profile = JSON.parse(sessionStorage.getItem("kicksplit-profile"));
       if (Number.isInteger(profile?.id) && profile.email) initial.user = profile;
