@@ -23,6 +23,7 @@ public class StoredProposalPlayer {
     private int teamNumber;
     private String name;
     private int rating;
+    private Long userId;
 
     public StoredProposalPlayer() {
     }
@@ -30,11 +31,13 @@ public class StoredProposalPlayer {
     public StoredProposalPlayer(
             StoredTeamProposal proposal,
             int teamNumber,
+            Long userId,
             String name,
             int rating) {
 
         this.proposal = proposal;
         this.teamNumber = teamNumber;
+        this.userId = userId;
         this.name = name;
         this.rating = rating;
     }
@@ -58,4 +61,8 @@ public class StoredProposalPlayer {
     public int getRating() {
         return rating;
     }
+    
+    public Long getUserId() {
+    return userId;
+}
 }
