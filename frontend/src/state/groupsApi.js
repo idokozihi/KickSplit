@@ -31,8 +31,8 @@ export function mapGroup(dto) {
   };
 }
 
-export async function loadGroups(signal) {
-  return (await request("/groups", { signal })).map(mapGroup);
+export async function loadGroups(userId, signal) {
+  return (await request(`/groups/user/${encodeURIComponent(userId)}`, { signal })).map(mapGroup);
 }
 
 export function resolveBackendUser(user) {

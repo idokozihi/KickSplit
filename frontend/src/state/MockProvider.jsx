@@ -4,7 +4,7 @@ import { loadRegistrations, saveRegistration, registrationState } from "./regist
 import { createGame, loadGroupGames, mergeGames } from "./gamesApi";
 import { loadGuests, saveGuest, mergeGuests } from "./guestsApi";
 import { MockContext } from "./context";
-import { initialState, createProposedDay, respondToDay, gameDays } from "./mock";
+import { initialState, stateForUser, createProposedDay, respondToDay, gameDays } from "./mock";
 import { loginUser, registerUser } from "./authApi";
 import { saveUserProfile } from "./usersApi";
 
@@ -24,24 +24,25 @@ export default function MockProvider({ children }) {
     }
     catch { /* The current session can still use the profile in memory. */ }
   }, [data.user]);
-  const [groupsLoading, setGroupsLoading] = useState(true);
+  const [groupsLoading, setGroupsLoading] = useState(Number.isInteger(data.user?.id));
   const [groupsError, setGroupsError] = useState("");
-  const [gamesLoading, setGamesLoading] = useState(true);
+  const [gamesLoading, setGamesLoading] = useState(Number.isInteger(data.user?.id));
   const [gamesError, setGamesError] = useState("");
+  const userId = data.user?.id;
   useEffect(() => {
+    if (!Number.isInteger(userId)) return;
     const controller = new AbortController();
-    loadGroups(controller.signal)
+    loadGroups(userId, controller.signal)
       .then(async (groups) => {
         if (controller.signal.aborted) return;
-        setData((current) => ({
-          ...current,
-          groups: [...groups.filter((group) => !current.groups.some((item) => item.id === group.id)), ...current.groups],
-        }));
+        setData((current) => current.user?.id === userId ? { ...current, groups } : current);
         setGroupsLoading(false);
         const results = await Promise.allSettled(groups.map((group) => loadGroupGames(group.id, controller.signal)));
         if (controller.signal.aborted) return;
         const loaded = results.filter((result) => result.status === "fulfilled").flatMap((result) => result.value);
-        setData((current) => ({ ...current, games: mergeGames(current.games, loaded) }));
+        setData((current) => current.user?.id === userId
+          ? { ...current, games: mergeGames(current.games, loaded) }
+          : current);
         const failed = results.find((result) => result.status === "rejected");
         if (failed) setGamesError(failed.reason.message || "Could not load games. Please refresh to try again.");
       })
@@ -55,20 +56,29 @@ export default function MockProvider({ children }) {
         }
       });
     return () => controller.abort();
-  }, []);
+  }, [userId]);
+  const setAuthenticatedUser = (user) => {
+    if (data.user?.id !== user.id) {
+      setGroupsLoading(true);
+      setGamesLoading(true);
+      setGroupsError("");
+      setGamesError("");
+    }
+    setData((current) => stateForUser(current, user, !import.meta.env.PROD));
+  };
   const updateUser = async (updates) => {
     const user = await saveUserProfile(data.user, updates);
-    setData((current) => ({ ...current, user }));
+    setAuthenticatedUser(user);
     return user;
   };
   const login = async (email, password) => {
     const user = await loginUser(email, password);
-    setData((current) => ({ ...current, user }));
+    setAuthenticatedUser(user);
     return user;
   };
   const register = async (name, email, password) => {
     const user = await registerUser(name, email, password);
-    setData((current) => ({ ...current, user }));
+    setAuthenticatedUser(user);
     return user;
   };
   const addGroup = async (input) => {

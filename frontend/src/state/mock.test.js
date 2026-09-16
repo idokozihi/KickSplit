@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
-import { initialState, goingPlayers, makeProposals, upcoming } from "./mock.js";
+import { initialState, stateForUser, goingPlayers, makeProposals, upcoming } from "./mock.js";
 import { rankedDaysByGroup } from "./mock.js";
 import { createProposedDay, availableCount, mostPopularDays, respondToDay, proposedDate, rankedDays, gameDays, dayGame } from "./mock.js";
 
@@ -10,6 +10,16 @@ test("production starts without demo games while development keeps seed games", 
   assert.deepEqual(initialState({ includeDemoGames: false }).games, []);
   assert.ok(initialState({ includeDemoGames: true }).games.some((game) => game.title === "Under the lights"));
   assert.ok(initialState().games.length > 0);
+});
+
+test("changing authenticated users clears previous groups and games", () => {
+  const previous = { user: { id: 7 }, groups: [{ id: "old" }], games: [{ id: "old-game" }] };
+  const nextUser = { id: 8, name: "Next" };
+  assert.deepEqual(stateForUser(previous, nextUser, false), { user: nextUser, groups: [], games: [] });
+  assert.ok(stateForUser(previous, nextUser, true).games.length > 0);
+  assert.deepEqual(stateForUser(previous, { id: 7, name: "Updated" }, false), {
+    ...previous, user: { id: 7, name: "Updated" },
+  });
 });
 
 test("creation waits for saving and navigates using the backend ID", async () => {

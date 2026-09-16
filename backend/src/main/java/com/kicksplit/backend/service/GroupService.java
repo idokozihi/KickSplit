@@ -1,19 +1,18 @@
 package com.kicksplit.backend.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
-
-import com.kicksplit.backend.repository.GroupRepository;
-
-import com.kicksplit.backend.repository.GroupMemberRepository;
-import com.kicksplit.backend.repository.UserRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.kicksplit.backend.dto.CreateGroupRequest;
+import com.kicksplit.backend.dto.JoinGroupRequest;
 import com.kicksplit.backend.entity.Group;
 import com.kicksplit.backend.entity.GroupMember;
 import com.kicksplit.backend.entity.User;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import com.kicksplit.backend.dto.JoinGroupRequest;
+import com.kicksplit.backend.repository.GroupMemberRepository;
+import com.kicksplit.backend.repository.GroupRepository;
+import com.kicksplit.backend.repository.UserRepository;
 
 @Service
 public class GroupService {
@@ -64,6 +63,13 @@ public class GroupService {
 
     public List<Group> getAllGroups() {
         return groupRepository.findAll();
+    }
+
+    public List<Group> getGroupsByUserId(Long userId) {
+    return groupMemberRepository.findByUser_Id(userId)
+        .stream()
+        .map(GroupMember::getGroup)
+        .toList();
     }
 
     @Transactional

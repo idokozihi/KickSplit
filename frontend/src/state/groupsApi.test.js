@@ -17,7 +17,8 @@ test("create uses a real creator ID and server ID survives a fresh load", async 
     name: "Friday FC", imageUrl: null, creatorUserId: 7,
     selfOverallRating: 3, selfAttackRating: 4, selfDefenseRating: 2,
   });
-  assert.deepEqual(await loadGroups(), [created]);
+  assert.deepEqual(await loadGroups(7), [created]);
+  assert.equal(calls[1].url, "/api/groups/user/7");
 });
 
 test("joining uses the authenticated user id and real token", async (t) => {
@@ -34,6 +35,6 @@ test("joining uses the authenticated user id and real token", async (t) => {
 
 test("failed requests reject instead of returning a demo group", async (t) => {
   t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 500 }));
-  await assert.rejects(loadGroups(), /Could not load group data \(500\)/);
+  await assert.rejects(loadGroups(7), /Could not load group data \(500\)/);
   await assert.rejects(saveGroup({ ratings: {} }, { id: 7 }), /Could not save/);
 });

@@ -49,6 +49,14 @@ public class GroupController {
         return GroupResponseDto.fromGroup(group);
     }
 
+    @GetMapping("/user/{userId}")
+    public List<GroupResponseDto> getGroupsByUserId(@PathVariable Long userId) {
+        return groupService.getGroupsByUserId(userId)
+                .stream()
+                .map(GroupResponseDto::fromGroup)
+                .toList();
+    }
+
     @PostMapping("/join/{inviteToken}")
     public GroupResponseDto joinGroup(
             @PathVariable String inviteToken,

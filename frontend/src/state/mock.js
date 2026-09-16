@@ -111,6 +111,11 @@ export function initialState({ includeDemoGames = true } = {}) {
     games: includeDemoGames ? seedGames() : [],
   };
 }
+export function stateForUser(current, user, includeDemoGames) {
+  return current.user?.id === user.id
+    ? { ...current, user }
+    : { ...current, user, groups: [], games: initialState({ includeDemoGames }).games };
+}
 export function upcoming(games) {
   return games
     .filter((game) => game.proposedDays || new Date(game.date) > new Date())
