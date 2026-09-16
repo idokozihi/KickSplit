@@ -6,7 +6,8 @@ import { useApp } from "../state/context";
 import { useVotes } from "../state/useVotes";
 import { proposalVoteState } from "../state/votesApi";
 import { goingPlayers, makeProposals, dayGame } from "../state/mock";
-import { Avatar, BackLink, EmptyState, PageHeading } from "../components/UI";
+import { BackLink, EmptyState, PageHeading } from "../components/UI";
+import ProposalTeams from "../components/ProposalTeams";
 
 export default function TeamProposals() {
   const { gameId } = useParams();
@@ -105,30 +106,7 @@ export default function TeamProposals() {
               </div>
               <span className="badge neutral">3 teams</span>
             </header>
-            <div className="team-grid">
-              {teams.map((team, teamIndex) => (
-                <div className={`team team-${teamIndex}`} key={teamIndex}>
-                  <div className="section-heading">
-                    <h3>Team {teamIndex + 1}</h3>
-                    <span>{team.length} players</span>
-                  </div>
-                  {team.map((player) => (
-                    <div className="person" key={player.id}>
-                      <Avatar
-                        name={player.name}
-                        photo={player.isCurrentUser || player.id === "me" ? user.photo : undefined}
-                      />
-                      <span>
-                        {player.name}
-                        {(player.guest || player.isCurrentUser || player.id === "me") && (
-                          <small>{player.guest ? "Guest" : "You"}</small>
-                        )}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
+            <ProposalTeams teams={teams} user={user} />
             {backendBacked && <div className="section-heading">
               <span aria-live="polite">{voting.votes ? `${count} ${count === 1 ? "vote" : "votes"}` : "Votes unavailable"}</span>
               <button className={`button ${selected ? "secondary" : "primary"}`}

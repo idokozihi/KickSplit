@@ -1,4 +1,5 @@
 import ProposedDays from "../components/ProposedDays";
+import GameResult from "../components/GameResult";
 import { useEffect, useState } from "react";
 import { loadGame } from "../state/gamesApi";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -255,6 +256,7 @@ export default function Game() {
           </div>
         </aside>
       </div>
+      <Section title="Game result"><GameResult game={game} user={user} availabilityKnown={Boolean(backendGameId && !registrationStatus.loading)} /></Section>
       {addingGuest && (
         <Modal title="Bring a friend" onClose={() => setAddingGuest(false)}>
           <form className="form" onSubmit={addGuest}>

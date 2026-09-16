@@ -957,6 +957,10 @@ svg {
   gap: 18px;
   padding: 22px;
 }
+.result-choice { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.result-wins { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.result-wins input { width: 100%; }
+@media (max-width: 600px) { .result-wins { grid-template-columns: 1fr; } }
 .team {
   border-top: 3px solid #87a86c;
   background: #f7faf2;
