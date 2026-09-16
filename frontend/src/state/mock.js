@@ -165,7 +165,7 @@ export function participantCount(day) {
   return availableCount(day) + (day.guests || []).length;
 }
 export function compareDays(a, b) {
-  return availableCount(b) - availableCount(a)
+  return participantCount(b) - participantCount(a)
     || a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
 }
 export function mostPopularDays(days) {

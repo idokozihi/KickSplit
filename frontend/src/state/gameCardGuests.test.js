@@ -33,7 +33,7 @@ test("participants include only AVAILABLE members and guests", () => {
   assert.equal(participantCount({ availability: { a: "UNAVAILABLE", b: null }, guests: [] }), 0);
 });
 
-test("Home and Games day selections have the same participant count without changing popularity ranking", () => {
+test("Home and Games day selections rank by the same count displayed on cards", () => {
   const game = {
     id: "42", groupId: "7", date: "2026-09-18", rsvp: "GOING",
     participants: [{ id: "8", status: "NOT_GOING" }, { id: "9", status: "MAYBE" }],
@@ -45,5 +45,7 @@ test("Home and Games day selections have the same participant count without chan
   assert.equal(participantCount(gamesDay), 3);
   assert.deepEqual(gameDays(game)[0].availability, { me: "AVAILABLE", 8: "UNAVAILABLE" });
   const other = { ...game, id: "43", guests: [], participants: [{ id: "8", status: "GOING" }] };
-  assert.equal(rankedDaysByGroup([game, other])[0].game.id, "43");
+  assert.equal(rankedDays([game, other])[0].game.id, "42");
+  assert.equal(rankedDaysByGroup([game, other])[0].game.id, "42");
+  assert.equal(rankedDaysByGroup([game, other])[0].popular, true);
 });

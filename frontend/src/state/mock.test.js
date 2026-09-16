@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { initialState, stateForUser, goingPlayers, makeProposals, upcoming } from "./mock.js";
 import { rankedDaysByGroup } from "./mock.js";
-import { createProposedDay, availableCount, mostPopularDays, respondToDay, proposedDate, rankedDays, gameDays, dayGame } from "./mock.js";
+import { createProposedDay, availableCount, participantCount, mostPopularDays, respondToDay, proposedDate, rankedDays, gameDays, dayGame } from "./mock.js";
 
 test("production starts without demo games while development keeps seed games", () => {
   assert.deepEqual(initialState({ includeDemoGames: false }).games, []);
@@ -176,7 +176,7 @@ test("guest ratings survive roster selection and every team proposal", () => {
 });
 
 
-test("all cards rank across games by availability, then date and ID without mutating state", () => {
+test("all cards rank across games by participants, then date and ID without mutating state", () => {
   const day = (id, date, availability = {}) => ({ id, date, availability });
   const first = { id: "game-a", proposedDays: [day("later", "2026-09-20"), day("early", "2026-09-18")] };
   const second = { id: "game-b", proposedDays: [day("popular", "2026-09-25", { me: "AVAILABLE" })] };
@@ -189,6 +189,45 @@ test("all cards rank across games by availability, then date and ID without muta
   assert.deepEqual(mostPopularDays(tied), ["a"]);
   assert.deepEqual(mostPopularDays(tied.reverse()), ["a"]);
   assert.deepEqual(rankedDays([]), []);
+});
+
+test("guest arrivals change Most popular to the day with the highest displayed participant count", () => {
+  const available = (count) => Object.fromEntries(
+    Array.from({ length: count }, (_, index) => [`member-${index}`, "AVAILABLE"]),
+  );
+  const first = {
+    id: "a", groupId: "crew", proposedDays: [{
+      id: "a-day", date: "2026-09-20", availability: { ...available(3), unavailable: "UNAVAILABLE", unanswered: null }, guests: [],
+    }],
+  };
+  const second = {
+    id: "b", groupId: "crew", proposedDays: [{
+      id: "b-day", date: "2026-09-21", availability: available(2), guests: [],
+    }],
+  };
+  assert.equal(rankedDaysByGroup([first, second])[0].day.id, "a-day");
+  const withGuests = { ...second, proposedDays: [{
+    ...second.proposedDays[0], guests: [{ id: "guest-1" }, { id: "guest-2" }],
+  }] };
+  const cards = rankedDaysByGroup([first, withGuests]);
+  assert.deepEqual(cards.map(({ day, popular }) => [day.id, participantCount(day), popular]), [
+    ["b-day", 4, true], ["a-day", 3, false],
+  ]);
+  assert.equal(rankedDays([first, withGuests])[0].day.id, "b-day");
+  assert.deepEqual(mostPopularDays([first.proposedDays[0], withGuests.proposedDays[0]]), ["b-day"]);
+});
+
+test("participant ties use date, day ID, then game ID consistently", () => {
+  const day = (id, date) => ({ id, date, availability: { me: "AVAILABLE" }, guests: [{ id: "guest" }] });
+  const games = [
+    { id: "game-z", groupId: "crew", proposedDays: [day("same", "2026-09-20")] },
+    { id: "game-a", groupId: "crew", proposedDays: [day("same", "2026-09-20")] },
+    { id: "game-b", groupId: "crew", proposedDays: [day("earlier", "2026-09-19")] },
+  ];
+  assert.deepEqual(rankedDays(games).map(({ game }) => game.id), ["game-b", "game-a", "game-z"]);
+  assert.deepEqual(rankedDaysByGroup([...games].reverse()).map(({ game, popular }) => [game.id, popular]), [
+    ["game-b", true], ["game-a", false], ["game-z", false],
+  ]);
 });
 
 test("existing demo dates use the same cards and member counts, excluding guests", () => {
