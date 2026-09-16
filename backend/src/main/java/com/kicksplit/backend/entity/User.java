@@ -4,6 +4,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Column;
 @Entity
 @Table(name = "users")
 
@@ -13,6 +14,7 @@ public class User {
 private Long id;
 private String name ;
 private String username;
+@Column(columnDefinition = "TEXT")
 private String imageUrl;
 private String email;
 private String passwordHash;

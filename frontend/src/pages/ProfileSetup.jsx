@@ -15,8 +15,8 @@ export default function ProfileSetup() {
         <p className="muted">Help your teammates recognise you.</p>
         <ProfileForm
           setup
-          onSave={(values) => {
-            updateUser(values);
+          onSave={async (values) => {
+            await updateUser(values);
             navigate("/home");
           }}
         />

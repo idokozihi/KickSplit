@@ -232,6 +232,7 @@ export function ProfileForm({ onSave, setup = false }) {
   const [photo, setPhoto] = useState(user.photo);
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
+  const [saving, setSaving] = useState(false);
   function upload(event) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -255,7 +256,7 @@ export function ProfileForm({ onSave, setup = false }) {
     };
     reader.readAsDataURL(file);
   }
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
     const name = fields.get("name").trim();
@@ -263,12 +264,20 @@ export function ProfileForm({ onSave, setup = false }) {
       setError("Please enter your full name.");
       return;
     }
-    onSave({
-      name,
-      username: fields.get("username").trim(),
-      photo,
-      ...(!setup ? { email: fields.get("email").trim() } : {}),
-    });
+    setError("");
+    setSaving(true);
+    try {
+      await onSave({
+        name,
+        username: fields.get("username").trim(),
+        photo,
+        ...(!setup ? { email: fields.get("email").trim() } : {}),
+      });
+    } catch (failure) {
+      setError(failure.message || "Could not save your profile. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
   return (
     <form className="form" onSubmit={submit}>
@@ -326,8 +335,8 @@ export function ProfileForm({ onSave, setup = false }) {
           {error}
         </p>
       )}
-      <button className="button primary" disabled={reading}>
-        {setup ? "Continue" : "Save changes"}
+      <button className="button primary" disabled={reading || saving}>
+        {saving ? "Saving..." : setup ? "Continue" : "Save changes"}
         <Icon name="arrow" size={18} />
       </button>
     </form>

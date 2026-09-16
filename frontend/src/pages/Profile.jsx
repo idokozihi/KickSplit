@@ -53,8 +53,8 @@ export default function Profile() {
       {editing && (
         <Modal title="Edit your profile" onClose={() => setEditing(false)}>
           <ProfileForm
-            onSave={(values) => {
-              updateUser(values);
+            onSave={async (values) => {
+              await updateUser(values);
               setEditing(false);
               setSaved(true);
             }}

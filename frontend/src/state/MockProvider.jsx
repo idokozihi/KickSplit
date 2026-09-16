@@ -6,6 +6,7 @@ import { loadGuests, saveGuest, mergeGuests } from "./guestsApi";
 import { MockContext } from "./context";
 import { initialState, createProposedDay, respondToDay, gameDays } from "./mock";
 import { loginUser, registerUser } from "./authApi";
+import { saveUserProfile } from "./usersApi";
 
 export default function MockProvider({ children }) {
   const [data, setData] = useState(() => {
@@ -55,11 +56,11 @@ export default function MockProvider({ children }) {
       });
     return () => controller.abort();
   }, []);
-  const updateUser = (updates) =>
-    setData((current) => ({
-      ...current,
-      user: { ...current.user, ...updates },
-    }));
+  const updateUser = async (updates) => {
+    const user = await saveUserProfile(data.user, updates);
+    setData((current) => ({ ...current, user }));
+    return user;
+  };
   const login = async (email, password) => {
     const user = await loginUser(email, password);
     setData((current) => ({ ...current, user }));
