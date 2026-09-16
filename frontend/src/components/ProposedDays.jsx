@@ -3,14 +3,14 @@ import { useApp } from "../state/context";
 import { rankedDays } from "../state/mock";
 import { GameCard, Icon, Modal } from "./UI";
 
-export default function ProposedDays({ game, allowProposing = false, registrationStatus, showParticipants = false }) {
+export default function ProposedDays({ game, allowProposing = false, registrationStatus }) {
   const { proposeDay } = useApp();
   const [proposing, setProposing] = useState(false);
   const days = rankedDays([game]);
   return (
     <div className="card-list">
       {days.map(({ day }, index) => (
-        <GameCard key={day.id} game={game} day={day} popular={index === 0} registrationStatus={registrationStatus} showParticipants={showParticipants} />
+        <GameCard key={day.id} game={game} day={day} popular={index === 0} registrationStatus={registrationStatus} />
       ))}
       {allowProposing && !game.backendBacked && (
         <button className="button secondary" onClick={() => setProposing(true)}>

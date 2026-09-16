@@ -184,7 +184,7 @@ export default function Game() {
       <div className="home-grid">
         <div>
           <Section title="Proposed days">
-            <ProposedDays game={source} allowProposing registrationStatus={registrationStatus} showParticipants />
+            <ProposedDays game={source} allowProposing registrationStatus={registrationStatus} />
           </Section>
           <Section title={`The lineup · ${going.length} ${going.length === 1 ? "participant" : "participants"}`}>
             <div className="panel participant-panel">

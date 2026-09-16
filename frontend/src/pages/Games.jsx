@@ -25,7 +25,7 @@ export default function Games() {
         {gamesLoading ? <EmptyState title="Loading games..." /> : scheduled.length ? (
           <div className="cards-grid">
             {scheduled.map(({ game, day, popular }) => (
-              <GameCard game={game} day={day} popular={popular} showParticipants loadGuestList={game.backendBacked} key={`${game.id}-${day.id}`} />
+              <GameCard game={game} day={day} popular={popular} loadGuestList={game.backendBacked} key={`${game.id}-${day.id}`} />
             ))}
           </div>
         ) : !gamesError && !groupsError && (

@@ -92,7 +92,7 @@ export default function Group() {
             {scheduled.length ? (
               <div className="card-list">
                 {scheduled.map(({ game, day }, index) => (
-                  <GameCard game={game} day={day} popular={index === 0} key={`${game.id}-${day.id}`} />
+                  <GameCard game={game} day={day} popular={index === 0} loadGuestList={game.backendBacked} key={`${game.id}-${day.id}`} />
                 ))}
               </div>
             ) : (

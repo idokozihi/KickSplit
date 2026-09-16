@@ -33,7 +33,7 @@ export default function Home() {
       <div className="home-grid">
         <div>
           {scheduled[0] ? (
-            <GameCard {...scheduled[0]} popular featured />
+            <GameCard {...scheduled[0]} popular featured loadGuestList={scheduled[0].game.backendBacked} />
           ) : (
             <EmptyState
               title="Your next game starts with a group"
@@ -49,7 +49,7 @@ export default function Home() {
             {waiting.length ? (
               <div className="card-list">
                 {waiting.slice(0, 2).map(({ game, day }) => (
-                  <GameCard key={`${game.id}-${day.id}`} game={game} day={day} />
+                  <GameCard key={`${game.id}-${day.id}`} game={game} day={day} loadGuestList={game.backendBacked} />
                 ))}
               </div>
             ) : (

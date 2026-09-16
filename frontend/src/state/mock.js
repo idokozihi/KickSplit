@@ -161,6 +161,9 @@ export function createProposedDay(date, user) {
 export function availableCount(day) {
   return Object.values(day.availability).filter((value) => value === "AVAILABLE").length;
 }
+export function participantCount(day) {
+  return availableCount(day) + (day.guests || []).length;
+}
 export function compareDays(a, b) {
   return availableCount(b) - availableCount(a)
     || a.date.localeCompare(b.date) || a.id.localeCompare(b.id);

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useApp } from "../state/context";
-import { availableCount, gameDays, proposedDate, rankedDays } from "../state/mock";
+import { gameDays, participantCount, proposedDate, rankedDays } from "../state/mock";
 
 export function Icon({ name = "ball", size = 22, ...props }) {
   const paths = {
@@ -170,7 +170,7 @@ export function Status({ value }) {
     </span>
   );
 }
-export function GameCard({ game, day = gameDays(game)[0], popular = false, featured = false, registrationStatus, showParticipants = false, loadGuestList = false }) {
+export function GameCard({ game, day = gameDays(game)[0], popular = false, featured = false, registrationStatus, loadGuestList = false }) {
   const { groups, user, setAvailability, refreshRegistrations, refreshGuests } = useApp();
   const [guestError, setGuestError] = useState(null);
   const [guestRetry, setGuestRetry] = useState(0);
@@ -218,7 +218,7 @@ export function GameCard({ game, day = gameDays(game)[0], popular = false, featu
     }
   }
   const group = groups.find((item) => item.id === game.groupId);
-  const count = availableCount(day) + (showParticipants ? (day.guests || []).length : 0);
+  const count = participantCount(day);
   return (
     <article className={`game-card ${featured ? "featured" : ""}`}>
       <div className="game-card-top">
@@ -234,7 +234,7 @@ export function GameCard({ game, day = gameDays(game)[0], popular = false, featu
       </div>
       {!game.backendBacked && <p className="form-hint">Proposed by <bdi>{day.proposedBy.id === "me" ? user.name : day.proposedBy.name}</bdi></p>}
       <div className="game-card-bottom">
-        <span aria-live="polite"><Icon name="groups" size={18} />{guestsLoading ? (guestFailure ? "Participant count unavailable" : "Loading participants...") : <><b>{count}</b> {showParticipants ? (count === 1 ? "participant" : "participants") : `${count === 1 ? "member" : "members"} available`}</>}</span>
+        <span aria-live="polite"><Icon name="groups" size={18} />{guestsLoading ? (guestFailure ? "Participant count unavailable" : "Loading participants...") : <><b>{count}</b> {count === 1 ? "participant" : "participants"}</>}</span>
         <Link className="circle-arrow" to={`/games/${game.id}?day=${day.id}`} aria-label={`View ${game.title}, ${proposedDate(day.date)}`}><Icon name="arrow" size={20} /></Link>
       </div>
       <div className="rsvp-options availability-options" role="group" aria-label={`Your availability for ${proposedDate(day.date)}`}>
