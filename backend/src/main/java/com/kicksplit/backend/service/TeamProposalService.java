@@ -13,6 +13,7 @@ import com.kicksplit.backend.dto.TeamProposalResponseDto;
 import com.kicksplit.backend.entity.Game;
 import com.kicksplit.backend.entity.Guest;
 import com.kicksplit.backend.entity.GroupMember;
+import com.kicksplit.backend.entity.RatingSource;
 import com.kicksplit.backend.entity.Registration;
 import com.kicksplit.backend.entity.RegistrationStatus;
 import com.kicksplit.backend.entity.StoredProposalPlayer;
@@ -88,12 +89,12 @@ public class TeamProposalService {
                 for (PlayerCandidate player : proposal.getTeams().get(teamIndex)) {
 
                     storedProposalPlayerRepository.save(
-        new StoredProposalPlayer(
-                storedProposal,
-                teamIndex + 1,
-                player.getUserId(),
-                player.getName(),
-                player.getRating()));
+                            new StoredProposalPlayer(
+                                    storedProposal,
+                                    teamIndex + 1,
+                                    player.getUserId(),
+                                    player.getName(),
+                                    player.getRating()));
                 }
             }
 
@@ -122,10 +123,18 @@ public class TeamProposalService {
                             game.getGroup().getId())
                     .orElseThrow(() -> new RuntimeException("Group member not found"));
 
-           players.add(new PlayerCandidate(
-                registration.getUser().getId(),
-                registration.getUser().getName(),
-                membership.getSelfOverallRating()));
+            double rating;
+
+            if (game.getGroup().getRatingSource() == RatingSource.APP_RATING) {
+                rating = membership.getAppRating();
+            } else {
+                rating = membership.getSelfOverallRating();
+            }
+
+            players.add(new PlayerCandidate(
+                    registration.getUser().getId(),
+                    registration.getUser().getName(),
+                    rating));
         }
 
         List<Guest> guests = guestRepository.findByGame_Id(game.getId());
@@ -154,9 +163,9 @@ public class TeamProposalService {
         for (StoredProposalPlayer player : players) {
             teams.get(player.getTeamNumber() - 1)
                     .add(new PlayerCandidate(
-        player.getUserId(),
-        player.getName(),
-        player.getRating()));
+                            player.getUserId(),
+                            player.getName(),
+                            player.getRating()));
         }
 
         return new TeamProposalResponseDto(

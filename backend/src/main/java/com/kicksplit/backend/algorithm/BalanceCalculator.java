@@ -19,11 +19,12 @@ public class BalanceCalculator {
     }
 
     private double calculateTeamAverage(List<PlayerCandidate> team) {
-        int sum = 0;
+        double sum = 0.0;
+
         for (PlayerCandidate player : team) {
             sum += player.getRating();
         }
 
-        return (double) sum / team.size();
+        return sum / team.size();
     }
 }

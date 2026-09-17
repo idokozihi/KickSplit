@@ -3,6 +3,7 @@ package com.kicksplit.backend.service;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import com.kicksplit.backend.entity.RatingSource;
 import org.springframework.transaction.annotation.Transactional;
 import com.kicksplit.backend.dto.GroupMemberStatsResponseDto;
 import com.kicksplit.backend.dto.CreateGroupRequest;
@@ -133,5 +134,32 @@ public class GroupService {
                 .stream()
                 .map(GroupMemberStatsResponseDto::fromMember)
                 .toList();
+    }
+
+    @Transactional
+    public Group updateRatingSource(
+            Long groupId,
+            Long userId,
+            RatingSource ratingSource) {
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        GroupMember membership = groupMemberRepository
+                .findByUser_IdAndGroup_Id(userId, groupId)
+                .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
+
+        if (!membership.isAdmin()) {
+            throw new RuntimeException(
+                    "Only group admins can change rating source");
+        }
+
+        if (ratingSource == null) {
+            throw new RuntimeException("Rating source is required");
+        }
+
+        group.setRatingSource(ratingSource);
+
+        return groupRepository.save(group);
     }
 }

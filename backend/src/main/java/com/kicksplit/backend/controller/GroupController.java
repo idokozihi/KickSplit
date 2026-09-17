@@ -13,13 +13,15 @@ import com.kicksplit.backend.entity.Group;
 
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
-
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import com.kicksplit.backend.dto.GroupMemberStatsResponseDto;
 
 import com.kicksplit.backend.dto.GroupResponseDto;
 import com.kicksplit.backend.dto.JoinGroupRequest;
 import com.kicksplit.backend.dto.InviteTokenResponse;
+import com.kicksplit.backend.dto.UpdateRatingSourceRequest;
+
 
 @RestController
 @RequestMapping("/api/groups")
@@ -82,5 +84,18 @@ public class GroupController {
             @PathVariable Long groupId) {
 
         return groupService.getGroupMembers(groupId);
+    }
+
+    @PatchMapping("/{groupId}/rating-source")
+    public GroupResponseDto updateRatingSource(
+            @PathVariable Long groupId,
+            @RequestBody UpdateRatingSourceRequest request) {
+
+        Group group = groupService.updateRatingSource(
+                groupId,
+                request.userId(),
+                request.ratingSource());
+
+        return GroupResponseDto.fromGroup(group);
     }
 }

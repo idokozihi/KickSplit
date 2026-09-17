@@ -4,13 +4,13 @@ public class PlayerCandidate {
 
     private Long userId;
     private String name;
-    private int rating;
+    private double rating;
 
-    public PlayerCandidate(String name, int rating) {
+    public PlayerCandidate(String name, double rating) {
         this(null, name, rating);
     }
 
-    public PlayerCandidate(Long userId, String name, int rating) {
+    public PlayerCandidate(Long userId, String name, double rating) {
         this.userId = userId;
         this.name = name;
         this.rating = rating;
@@ -24,7 +24,7 @@ public class PlayerCandidate {
         return name;
     }
 
-    public int getRating() {
+    public double getRating() {
         return rating;
     }
 }
