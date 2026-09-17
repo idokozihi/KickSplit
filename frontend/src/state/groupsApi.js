@@ -8,6 +8,9 @@ async function request(path, options = {}) {
     throw new Error("Could not connect to KickSplit. Please try again.");
   }
   if (!response.ok) {
+    if (path.endsWith("/rating-source") && response.status === 403) {
+      throw new Error("Only group admins can change the team balancing rating.");
+    }
     if (path.startsWith("/groups/join/")) {
       let message = "";
       try { message = (await response.json()).message || ""; } catch { /* Error body may be empty. */ }
@@ -17,7 +20,7 @@ async function request(path, options = {}) {
       if ([400, 404, 410].includes(response.status)) throw new Error("This invite link is invalid or has expired.");
       throw new Error("Could not join this group. The link may be invalid, or you may already be a member.");
     }
-    throw new Error(`Could not ${options.method === "POST" ? "save" : "load"} group data (${response.status}). Please try again.`);
+    throw new Error(`Could not ${["POST", "PATCH"].includes(options.method) ? "save" : "load"} group data (${response.status}). Please try again.`);
   }
   return response.json();
 }
@@ -38,6 +41,7 @@ export function mapGroup(dto) {
     initials: dto.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("").toUpperCase(),
     color: "green",
     description: "Your crew. Your game.",
+    ratingSource: dto.ratingSource || "APP_RATING",
     // The Groups DTO does not expose membership or player ratings.
     members: [],
     ratings: {},
@@ -47,6 +51,23 @@ export function mapGroup(dto) {
 
 export async function loadGroups(userId, signal) {
   return (await request(`/groups/user/${encodeURIComponent(userId)}`, { signal })).map(mapGroup);
+}
+
+export async function loadGroup(groupId, signal) {
+  return mapGroup(await request(`/groups/${encodeURIComponent(groupId)}`, { signal }));
+}
+
+export async function loadGroupMembers(groupId, signal) {
+  return request(`/groups/${encodeURIComponent(groupId)}/members`, { signal });
+}
+
+export async function saveRatingSource(groupId, userId, ratingSource) {
+  const response = await request(`/groups/${encodeURIComponent(groupId)}/rating-source`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, ratingSource }),
+  });
+  return mapGroup(response);
 }
 
 export async function loadInviteToken(groupId, userId) {

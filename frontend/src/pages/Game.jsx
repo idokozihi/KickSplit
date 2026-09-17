@@ -256,7 +256,7 @@ export default function Game() {
           </div>
         </aside>
       </div>
-      <Section title="Game result"><GameResult game={game} user={user} availabilityKnown={Boolean(backendGameId && !registrationStatus.loading)} /></Section>
+      <GameResult game={game} user={user} availabilityKnown={Boolean(backendGameId && !registrationStatus.loading)} />
       {addingGuest && (
         <Modal title="Bring a friend" onClose={() => setAddingGuest(false)}>
           <form className="form" onSubmit={addGuest}>

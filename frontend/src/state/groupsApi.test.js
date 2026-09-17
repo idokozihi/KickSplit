@@ -1,6 +1,40 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadGroups, loadInviteToken, saveGroup } from "./groupsApi.js";
+import { loadGroup, loadGroupMembers, loadGroups, loadInviteToken, saveGroup, saveRatingSource } from "./groupsApi.js";
+
+test("group detail and members load from their endpoints", async (t) => {
+  const calls = [];
+  const signal = new AbortController().signal;
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    calls.push({ url, signal: options.signal });
+    return { ok: true, json: async () => url.endsWith("/members")
+      ? [{ userId: 7, name: "Alex", appRating: 3.5333333333, ratedGames: 1, totalWins: 5, winRate: 1 }]
+      : { id: 42, name: "Friday FC", ratingSource: "SELF_RATING" } };
+  });
+  const group = await loadGroup(42, signal);
+  const members = await loadGroupMembers(42, signal);
+  assert.equal(group.ratingSource, "SELF_RATING");
+  assert.equal(members[0].appRating, 3.5333333333);
+  assert.deepEqual(calls, [
+    { url: "/api/groups/42", signal },
+    { url: "/api/groups/42/members", signal },
+  ]);
+});
+
+test("admin rating source change uses the logged-in user id and saved response", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/groups/42/rating-source");
+    assert.equal(options.method, "PATCH");
+    assert.deepEqual(JSON.parse(options.body), { userId: 7, ratingSource: "APP_RATING" });
+    return { ok: true, json: async () => ({ id: 42, name: "Friday FC", ratingSource: "APP_RATING" }) };
+  });
+  assert.equal((await saveRatingSource(42, 7, "APP_RATING")).ratingSource, "APP_RATING");
+});
+
+test("rating source authorization failures explain the admin requirement", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 403 }));
+  await assert.rejects(saveRatingSource(42, 7, "SELF_RATING"), /Only group admins/);
+});
 
 test("admins request an invite token for their group and backend user id", async (t) => {
   t.mock.method(globalThis, "fetch", async (url) => {

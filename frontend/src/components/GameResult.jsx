@@ -8,6 +8,7 @@ import ProposalTeams from "./ProposalTeams";
 const emptyWins = ["0", "0", "0"];
 
 export default function GameResult({ game, user, availabilityKnown = false }) {
+  const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState(null);
   const [retry, setRetry] = useState(0);
   const [proposalId, setProposalId] = useState("");
@@ -64,7 +65,18 @@ export default function GameResult({ game, user, availabilityKnown = false }) {
       setSaving(false);
     }
   }
-  return <div className="panel">
+  const savedProposal = state.result && proposals.find((proposal) => String(proposal.id) === String(state.result.proposalId));
+  const summary = state.result
+    ? `${savedProposal ? `Proposal ${savedProposal.proposalNumber} · ` : ""}${state.result.team1Wins}–${state.result.team2Wins}–${state.result.team3Wins}`
+    : "Not entered";
+  return <div className={`result-card ${expanded ? "is-expanded" : ""}`}>
+    <button type="button" className="result-toggle" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
+      <span className="result-toggle-icon">⚽</span>
+      <span className="result-toggle-copy"><strong>Game result</strong><small>{summary}</small></span>
+      <span className="result-toggle-action">{expanded ? "Close" : state.result ? "View / edit" : "Enter result"}</span>
+      <span className="result-chevron" aria-hidden="true">{expanded ? "−" : "+"}</span>
+    </button>
+    {expanded && <div className="result-body">
     {state.result ? <p role="status"><strong>Saved result:</strong> Proposal {proposals.find((proposal) => String(proposal.id) === String(state.result.proposalId))?.proposalNumber ?? ""} · Team 1: {state.result.team1Wins} · Team 2: {state.result.team2Wins} · Team 3: {state.result.team3Wins} wins</p>
       : <p className="muted">Result not entered</p>}
     <form className="form" onSubmit={submit}>
@@ -89,6 +101,6 @@ export default function GameResult({ game, user, availabilityKnown = false }) {
       {saveError && <p className="error" role="alert">{saveError}</p>}
       {unavailableForFirstResult && <p className="form-hint">Only available participants can enter the first result.</p>}
       <button className="button primary" disabled={saving || !selected || unavailableForFirstResult}>{saving ? "Saving result..." : state.result ? "Update result" : "Save result"}</button>
-    </form>
+    </form></div>}
   </div>;
 }
