@@ -4,8 +4,9 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.kicksplit.backend.dto.GroupMemberStatsResponseDto;
 import com.kicksplit.backend.dto.CreateGroupRequest;
+import com.kicksplit.backend.dto.GroupMemberStatsResponseDto;
 import com.kicksplit.backend.dto.JoinGroupRequest;
 import com.kicksplit.backend.entity.Group;
 import com.kicksplit.backend.entity.GroupMember;
@@ -41,7 +42,7 @@ public class GroupService {
         Group group = new Group(
                 request.getName(),
                 request.getImageUrl());
-                group.setInviteToken(UUID.randomUUID().toString());
+        group.setInviteToken(UUID.randomUUID().toString());
 
         Group savedGroup = groupRepository.save(group);
 
@@ -68,10 +69,10 @@ public class GroupService {
     }
 
     public List<Group> getGroupsByUserId(Long userId) {
-    return groupMemberRepository.findByUser_Id(userId)
-        .stream()
-        .map(GroupMember::getGroup)
-        .toList();
+        return groupMemberRepository.findByUser_Id(userId)
+                .stream()
+                .map(GroupMember::getGroup)
+                .toList();
     }
 
     @Transactional
@@ -101,24 +102,36 @@ public class GroupService {
     }
 
     @Transactional
-      public String getInviteToken(Long groupId, Long userId) {
+    public String getInviteToken(Long groupId, Long userId) {
 
-    GroupMember membership = groupMemberRepository
-            .findByUser_IdAndGroup_Id(userId, groupId)
-            .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
+        GroupMember membership = groupMemberRepository
+                .findByUser_IdAndGroup_Id(userId, groupId)
+                .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
 
-    if (!membership.isAdmin()) {
-        throw new RuntimeException("Only group admins can access the invite code");
+        if (!membership.isAdmin()) {
+            throw new RuntimeException("Only group admins can access the invite code");
+        }
+
+        Group group = membership.getGroup();
+
+        if (group.getInviteToken() == null) {
+            group.setInviteToken(UUID.randomUUID().toString());
+            groupRepository.save(group);
+        }
+
+        return group.getInviteToken();
     }
 
-    Group group = membership.getGroup();
+    public List<GroupMemberStatsResponseDto> getGroupMembers(Long groupId) {
 
-    if (group.getInviteToken() == null) {
-        group.setInviteToken(UUID.randomUUID().toString());
-        groupRepository.save(group);
+        if (!groupRepository.existsById(groupId)) {
+            throw new RuntimeException("Group not found");
+        }
+
+        return groupMemberRepository
+                .findByGroup_Id(groupId)
+                .stream()
+                .map(GroupMemberStatsResponseDto::fromMember)
+                .toList();
     }
-
-    return group.getInviteToken();
-}
-
 }

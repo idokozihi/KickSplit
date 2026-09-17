@@ -1,7 +1,9 @@
 package com.kicksplit.backend.service;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.kicksplit.backend.dto.GameResultRequest;
 import com.kicksplit.backend.dto.GameResultResponseDto;
@@ -18,8 +20,6 @@ import com.kicksplit.backend.repository.GroupMemberRepository;
 import com.kicksplit.backend.repository.RegistrationRepository;
 import com.kicksplit.backend.repository.StoredTeamProposalRepository;
 import com.kicksplit.backend.repository.UserRepository;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class GameResultService {
@@ -30,6 +30,7 @@ public class GameResultService {
     private final RegistrationRepository registrationRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
+    private final RatingRecalculationService ratingRecalculationService;
 
     public GameResultService(
             GameResultRepository gameResultRepository,
@@ -37,7 +38,8 @@ public class GameResultService {
             StoredTeamProposalRepository proposalRepository,
             RegistrationRepository registrationRepository,
             GroupMemberRepository groupMemberRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            RatingRecalculationService ratingRecalculationService) {
 
         this.gameResultRepository = gameResultRepository;
         this.gameRepository = gameRepository;
@@ -45,6 +47,7 @@ public class GameResultService {
         this.registrationRepository = registrationRepository;
         this.groupMemberRepository = groupMemberRepository;
         this.userRepository = userRepository;
+        this.ratingRecalculationService = ratingRecalculationService;
     }
 
     @Transactional
@@ -77,6 +80,8 @@ public class GameResultService {
                 .findByGame_Id(gameId)
                 .orElse(null);
 
+        GameResult savedResult;
+
         if (existing == null) {
 
             Registration registration = registrationRepository
@@ -97,45 +102,52 @@ public class GameResultService {
                     request.team2Wins(),
                     request.team3Wins());
 
-            return toDto(gameResultRepository.save(result));
+            savedResult = gameResultRepository.saveAndFlush(result);
+
+        } else {
+
+            boolean isOriginalEditor =
+                    existing.getEnteredBy().getId().equals(user.getId());
+
+            GroupMember membership = groupMemberRepository
+                    .findByUser_IdAndGroup_Id(
+                            user.getId(),
+                            game.getGroup().getId())
+                    .orElse(null);
+
+            boolean isAdmin =
+                    membership != null && membership.isAdmin();
+
+            if (!isOriginalEditor && !isAdmin) {
+                throw new RuntimeException(
+                        "Only the original editor or an admin can edit results");
+            }
+
+            existing.setProposal(proposal);
+            existing.setTeam1Wins(request.team1Wins());
+            existing.setTeam2Wins(request.team2Wins());
+            existing.setTeam3Wins(request.team3Wins());
+
+            savedResult = gameResultRepository.saveAndFlush(existing);
         }
 
-        boolean isOriginalEditor =
-                existing.getEnteredBy().getId().equals(user.getId());
+        ratingRecalculationService.recalculateGroup(
+                game.getGroup().getId());
 
-        GroupMember membership = groupMemberRepository
-                .findByUser_IdAndGroup_Id(
-                        user.getId(),
-                        game.getGroup().getId())
-                .orElse(null);
-
-        boolean isAdmin =
-                membership != null && membership.isAdmin();
-
-        if (!isOriginalEditor && !isAdmin) {
-            throw new RuntimeException(
-                    "Only the original editor or an admin can edit results");
-        }
-
-        existing.setProposal(proposal);
-        existing.setTeam1Wins(request.team1Wins());
-        existing.setTeam2Wins(request.team2Wins());
-        existing.setTeam3Wins(request.team3Wins());
-
-        return toDto(gameResultRepository.save(existing));
+        return toDto(savedResult);
     }
 
     public GameResultResponseDto getResult(Long gameId) {
 
-    GameResult result = gameResultRepository
-            .findByGame_Id(gameId)
-            .orElseThrow(() ->
-                    new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Game result not found"));
+        GameResult result = gameResultRepository
+                .findByGame_Id(gameId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Game result not found"));
 
-    return toDto(result);
-}
+        return toDto(result);
+    }
 
     private GameResultResponseDto toDto(GameResult result) {
 

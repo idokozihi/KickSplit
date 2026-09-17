@@ -29,6 +29,14 @@ public class GroupMember {
 
     private int selfDefenseRating;
 
+    private Double appRating;
+
+    private Integer ratedGames;
+
+    private Integer totalWins;
+
+    private Integer totalRecordedWins;
+
     public GroupMember() {
     }
 
@@ -98,6 +106,46 @@ public class GroupMember {
 
     public void setSelfDefenseRating(int selfDefenseRating) {
         this.selfDefenseRating = selfDefenseRating;
+    }
+
+    public double getAppRating() {
+        return appRating != null ? appRating : selfOverallRating;
+    }
+
+    public void setAppRating(double appRating) {
+        this.appRating = appRating;
+    }
+
+    public int getRatedGames() {
+        return ratedGames != null ? ratedGames : 0;
+    }
+
+    public void setRatedGames(int ratedGames) {
+        this.ratedGames = ratedGames;
+    }
+
+    public int getTotalWins() {
+        return totalWins != null ? totalWins : 0;
+    }
+
+    public void setTotalWins(int totalWins) {
+        this.totalWins = totalWins;
+    }
+
+    public int getTotalRecordedWins() {
+        return totalRecordedWins != null ? totalRecordedWins : 0;
+    }
+
+    public void setTotalRecordedWins(int totalRecordedWins) {
+        this.totalRecordedWins = totalRecordedWins;
+    }
+
+    public double getWinRate() {
+        if (getTotalRecordedWins() == 0) {
+            return 0.0;
+        }
+
+        return (double) getTotalWins() / getTotalRecordedWins();
     }
 
 }

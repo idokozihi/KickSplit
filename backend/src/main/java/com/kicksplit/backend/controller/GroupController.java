@@ -15,6 +15,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import org.springframework.web.bind.annotation.PathVariable;
+import com.kicksplit.backend.dto.GroupMemberStatsResponseDto;
 
 import com.kicksplit.backend.dto.GroupResponseDto;
 import com.kicksplit.backend.dto.JoinGroupRequest;
@@ -74,5 +75,12 @@ public class GroupController {
 
         Group group = groupService.joinGroup(inviteToken, request);
         return GroupResponseDto.fromGroup(group);
+    }
+
+    @GetMapping("/{groupId}/members")
+    public List<GroupMemberStatsResponseDto> getGroupMembers(
+            @PathVariable Long groupId) {
+
+        return groupService.getGroupMembers(groupId);
     }
 }
