@@ -28,10 +28,11 @@ export default function Games() {
   const past = games.flatMap((game) => gameDays(game).filter((day) => isPast(day.date)).map((day) => ({ game, day })))
     .sort((a, b) => b.day.date.localeCompare(a.day.date));
   const [results, setResults] = useState({});
+  const [pastOpen, setPastOpen] = useState(false);
   const [retry, setRetry] = useState(0);
   const pastIds = [...new Set(past.filter(({ game }) => game.backendBacked).map(({ game }) => game.id))].join(",");
   useEffect(() => {
-    if (!pastIds) return;
+    if (!pastIds || !pastOpen) return;
     const controller = new AbortController();
     pastIds.split(",").forEach((id) => {
       loadGameResult(id, controller.signal)
@@ -39,13 +40,11 @@ export default function Games() {
         .catch((error) => { if (!controller.signal.aborted) setResults((current) => ({ ...current, [id]: { error: error.message } })); });
     });
     return () => controller.abort();
-  }, [pastIds, retry]);
+  }, [pastIds, pastOpen, retry]);
   return (
     <>
       <PageHeading
-        eyebrow="MAKE TIME FOR THE GAME"
         title="Your games"
-        subtitle="Find a day to play across your groups."
       />
       <Section
         title={`Proposed days${scheduled.length ? ` ֲ· ${scheduled.length}` : ""}`}
@@ -66,7 +65,8 @@ export default function Games() {
           />
         )}
       </Section>
-      <Section title="Past games">
+      <section className="section collapsible-section"><button className="collapse-trigger" aria-expanded={pastOpen} onClick={() => setPastOpen((value) => !value)}>Past games · {past.length}<span>{pastOpen ? "⌃" : "⌄"}</span></button>
+      {pastOpen && <>
         {gamesLoading ? <EmptyState title="Loading games..." /> : past.length ? <div className="cards-grid">
           {past.map(({ game, day }) => {
             const entry = results[game.id];
@@ -75,13 +75,13 @@ export default function Games() {
               <p className="muted">{game.groupName} ֲ· {proposedDate(day.date)}</p>
               {entry?.error ? <><p className="error" role="alert">{entry.error}</p><button className="button secondary" onClick={() => setRetry((value) => value + 1)}>Retry</button></>
                 : <p>{game.backendBacked && !entry ? "Loading result..." : entry?.result
-                  ? `Team 1: ${entry.result.team1Wins} ֲ· Team 2: ${entry.result.team2Wins} ֲ· Team 3: ${entry.result.team3Wins} wins`
+                  ? `Red ${entry.result.team1Wins} ֲ· Black ${entry.result.team2Wins} ֲ· White ${entry.result.team3Wins} wins`
                   : "Result not entered"}</p>}
               <Link className="text-link" to={`/games/${game.id}?day=${day.id}`}>View game</Link>
             </article>;
           })}
         </div> : <EmptyState title="No past games yet" />}
-      </Section>
+      </>}</section>
     </>
   );
 }

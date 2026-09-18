@@ -27,12 +27,12 @@ test("creation waits for saving and navigates using the backend ID", async () =>
   const form = source.slice(source.indexOf("export function CreateGameForm"));
   const handler = form.slice(form.indexOf("  async function submit(event)"), form.indexOf("\n  return ("));
   const calls = [];
-  const fields = new Map([["title", " Friday football "], ["date", "2026-09-18"], ["target", "15"]]);
+  const fields = new Map([["target", "15"]]);
   let complete;
   const pending = new Promise((resolve) => { complete = resolve; });
   const submit = runInNewContext(`${handler}\nsubmit`, {
     FormData: class { get(key) { return fields.get(key); } },
-    groupId: "7", saving: false,
+    groupId: "7", date: "2026-09-18", saving: false,
     setSaving: (value) => calls.push(["saving", value]),
     setError: (message) => { if (message) assert.fail(message); },
     addGame: (game) => { calls.push(["save", game]); return pending; },
@@ -42,6 +42,7 @@ test("creation waits for saving and navigates using the backend ID", async () =>
   const submitted = submit({ preventDefault() {}, currentTarget: {} });
   assert.deepEqual(calls.map(([action]) => action), ["saving", "save"]);
   assert.equal(calls[1][1].title, "Friday football");
+  assert.equal(calls[1][1].date, "2026-09-18");
   assert.equal(calls[1][1].target, 15);
   complete({ id: "42" });
   await submitted;
@@ -53,10 +54,10 @@ test("failed creation stays on the form and clears saving", async () => {
   const form = source.slice(source.indexOf("export function CreateGameForm"));
   const handler = form.slice(form.indexOf("  async function submit(event)"), form.indexOf("\n  return ("));
   const errors = [], savingStates = [];
-  const fields = new Map([["title", "Football"], ["date", "2026-09-18"], ["target", "15"]]);
+  const fields = new Map([["target", "15"]]);
   const submit = runInNewContext(`${handler}\nsubmit`, {
     FormData: class { get(key) { return fields.get(key); } },
-    groupId: "7", saving: false,
+    groupId: "7", date: "2026-09-18", saving: false,
     setSaving: (value) => savingStates.push(value),
     setError: (message) => errors.push(message),
     addGame: async () => { throw new Error("Server unavailable"); },

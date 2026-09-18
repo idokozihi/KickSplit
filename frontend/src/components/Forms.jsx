@@ -151,7 +151,7 @@ export function GroupFlow({ mode, onClose }) {
     </Modal>
   );
 }
-export function CreateGameForm({ groupId, onClose }) {
+export function CreateGameForm({ groupId, date, onClose }) {
   const { addGame } = useApp();
   const navigate = useNavigate();
   const [error, setError] = useState("");
@@ -160,12 +160,7 @@ export function CreateGameForm({ groupId, onClose }) {
     event.preventDefault();
     if (saving) return;
     const fields = new FormData(event.currentTarget);
-    const date = fields.get("date");
-    const title = fields.get("title").trim();
-    if (!title) {
-      setError("Enter a game name.");
-      return;
-    }
+    const title = `${new Date(`${date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long" })} football`;
     const target = Number(fields.get("target"));
     if (!Number.isInteger(target) || target < 1) {
       setError("Enter a positive whole number for the player target.");
@@ -184,24 +179,10 @@ export function CreateGameForm({ groupId, onClose }) {
     }
   }
   return (
-    <Modal title="Get a game together" onClose={onClose}>
+    <Modal title={`Game on ${new Date(`${date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}`} onClose={onClose}>
       <form className="form" onSubmit={submit}>
         <label>
-          Game name
-          <input
-            name="title"
-            placeholder="e.g. Friday football"
-            required
-            maxLength={70}
-            autoFocus
-          />
-        </label>
-        <label>
-          Propose a day
-          <input name="date" type="date" required />
-        </label>
-        <label>
-          Target player count
+          Target players
           <input
             name="target"
             type="number"
@@ -209,11 +190,9 @@ export function CreateGameForm({ groupId, onClose }) {
             step="1"
             defaultValue="15"
             required
+            autoFocus
           />
         </label>
-        <p className="form-hint">
-          Add one proposed day, then mark your availability. Members can propose more days.
-        </p>
         {error && (
           <p className="error" role="alert">
             {error}

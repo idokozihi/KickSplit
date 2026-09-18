@@ -17,7 +17,6 @@ function AppLayout() {
       </a>
       <header className="app-header">
         <Brand />
-        <span className="header-tagline">LESS PLANNING. MORE PLAYING.</span>
         <Link
           to="/profile"
           className="header-profile"
@@ -30,9 +29,6 @@ function AppLayout() {
       <main id="main" className="main-content" key={pathname}>
         <Outlet />
       </main>
-      <footer className="app-footer">
-        Made for your weekly game.<span>KickSplit Beta</span>
-      </footer>
     </div>
   );
 }

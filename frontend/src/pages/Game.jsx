@@ -1,5 +1,6 @@
 import ProposedDays from "../components/ProposedDays";
 import GameResult from "../components/GameResult";
+import TeamProposals from "./TeamProposals";
 import { useEffect, useState } from "react";
 import { loadGame } from "../state/gamesApi";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -20,6 +21,8 @@ export default function Game() {
   const [search] = useSearchParams();
   const { games, groups, user, updateGame, cacheGame, refreshRegistrations, refreshGuests, addBackendGuest } = useApp();
   const [addingGuest, setAddingGuest] = useState(false);
+  const [tab, setTab] = useState("lineup");
+  const [resultEpoch, setResultEpoch] = useState(0);
   const [error, setError] = useState("");
   const source = games.find((item) => item.id === gameId);
   const [loadError, setLoadError] = useState(null);
@@ -137,7 +140,6 @@ export default function Game() {
     <>
       <BackLink to="/games">Your games</BackLink>
       <PageHeading
-        eyebrow="PLAN YOUR NEXT GAME"
         title={game.title}
         subtitle={
           <Link className="text-link" to={`/groups/${group.id}`}>
@@ -146,6 +148,10 @@ export default function Game() {
           </Link>
         }
       />
+      <div className="app-tabs" role="group" aria-label="Game sections">
+        {[["lineup", "Lineup"], ["teams", "Teams"], ["info", "Info"]].map(([value, label]) => <button key={value} aria-pressed={tab === value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}>{label}</button>)}
+      </div>
+      {tab === "info" && <>
       <div className="game-details">
         <div>
           <Icon name="games" />
@@ -182,10 +188,13 @@ export default function Game() {
           </span>
         </div>
       </div>
+      <p className="game-info-group">Group: <Link className="text-link" to={`/groups/${group.id}`}>{group.name}</Link></p>
+      </>}
+      {tab === "lineup" && <>
       <div className="home-grid">
         <div>
-          <Section title="Proposed days">
-            <ProposedDays game={source} allowProposing registrationStatus={registrationStatus} />
+          <Section title="Your availability">
+            <ProposedDays game={source} allowProposing selectedDayId={game.day.id} registrationStatus={registrationStatus} />
           </Section>
           <Section title={`The lineup · ${going.length} ${going.length === 1 ? "participant" : "participants"}`}>
             <div className="panel participant-panel">
@@ -235,13 +244,10 @@ export default function Game() {
               Explore three ways to line up your available players and guests.
             </p>
             {going.length >= 3 ? (
-              <Link
-                className="button primary full-width"
-                to={`/games/${gameId}/proposals?day=${game.day.id}`}
-              >
+              <button className="button primary full-width" onClick={() => setTab("teams")}>
                 Generate teams
                 <Icon name="arrow" size={18} />
-              </Link>
+              </button>
             ) : (
               <>
                 <button className="button primary full-width" disabled>
@@ -256,7 +262,8 @@ export default function Game() {
           </div>
         </aside>
       </div>
-      <GameResult game={game} user={user} availabilityKnown={Boolean(backendGameId && !registrationStatus.loading)} />
+      </>}
+      {tab === "teams" && <><TeamProposals embedded onRegenerated={() => setResultEpoch((value) => value + 1)} /><GameResult key={`${gameId}:${resultEpoch}`} game={game} user={user} availabilityKnown={Boolean(backendGameId && !registrationStatus.loading)} /></>}
       {addingGuest && (
         <Modal title="Bring a friend" onClose={() => setAddingGuest(false)}>
           <form className="form" onSubmit={addGuest}>

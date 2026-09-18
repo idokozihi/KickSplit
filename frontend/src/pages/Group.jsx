@@ -4,8 +4,9 @@ import { useApp } from "../state/context";
 import { rankedDays } from "../state/mock";
 import { loadGroup, loadGroupMembers, loadInviteToken, saveRatingSource } from "../state/groupsApi";
 import { inviteUrl } from "../state/invite";
-import { Avatar, BackLink, EmptyState, GameCard, GroupImage, Icon, Modal, Section } from "../components/UI";
-import { CreateGameForm, RatingFields } from "../components/Forms";
+import { Avatar, BackLink, EmptyState, GroupImage, Icon, Modal, Section } from "../components/UI";
+import { RatingFields } from "../components/Forms";
+import GroupDateSelector from "../components/GroupDateSelector";
 
 const ratingText = (value) => Number.isFinite(value) ? Number(value).toFixed(2) : "—";
 const percentageText = (value) => `${Math.round((Number.isFinite(value) ? value : 0) * 100)}%`;
@@ -16,7 +17,7 @@ export default function Group() {
   const { groupId } = useParams();
   const { groups, groupsLoading, groupsError, games, user, updateRatings } = useApp();
   const group = groups.find((item) => item.id === groupId);
-  const [creating, setCreating] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [ratings, setRatings] = useState(null);
   const [inviting, setInviting] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -101,7 +102,6 @@ export default function Group() {
     <header className="group-hero">
       <GroupImage group={group} large />
       <div>
-        <p className="eyebrow">YOUR FOOTBALL CREW</p>
         <h1><bdi>{group.name}</bdi></h1>
         <p>{group.description}</p>
         <span className="group-member-count"><Icon name="groups" size={17} />
@@ -109,17 +109,13 @@ export default function Group() {
             : currentDetails?.error ? "Members unavailable" : "Members loading"}</span>
       </div>
     </header>
-    <button className="button secondary" onClick={openInvite}>Invite players</button>
+    <div className="group-actions"><button className="button secondary" onClick={openInvite}>Invite players</button><button className="button secondary" onClick={() => setSettingsOpen(true)}>⚙ Group settings</button></div>
     <div className="home-grid">
       <div>
         <Section title="Proposed days">
-          <button className="button primary section-action" onClick={() => setCreating(true)}><Icon name="plus" size={18} />Create game</button>
-          {scheduled.length ? <div className="card-list">
-            {scheduled.map(({ game, day }, index) => <GameCard game={game} day={day} popular={index === 0}
-              loadGuestList={game.backendBacked} key={`${game.id}-${day.id}`} />)}
-          </div> : <EmptyState title="Who's up for a game?" description="Propose a day and find out who is available." />}
+          <GroupDateSelector groupId={groupId} scheduled={scheduled} />
         </Section>
-        <Section title={members ? `Members · ${members.length}` : "Members"}>
+        <details className="collapsible-section"><summary>Members {members ? `· ${members.length}` : ""}<span>⌄</span></summary>
           {!currentDetails && <p className="muted" role="status">Loading members...</p>}
           {currentDetails?.error && <><p className="error" role="alert">{currentDetails.error}</p>
             <button className="button secondary" onClick={() => setDetailsRetry((value) => value + 1)}>Retry</button></>}
@@ -134,10 +130,10 @@ export default function Group() {
               <div className="player-stats"><span>Games <b>{statText(member.ratedGames)}</b></span><span>Wins <b>{statText(member.totalWins)}</b></span><span>Win rate <b>{percentageText(member.winRate)}</b></span></div>
             </article>)}
           </div>}
-        </Section>
+        </details>
       </div>
       <aside>
-        <Section title="Your player profile">
+        <details className="collapsible-section"><summary>Your player profile<span>⌄</span></summary>
           <div className="panel">
             <div className="person"><Avatar name={user.name} photo={user.photo} /><div><h3>{user.name}</h3><small><bdi>{group.name}</bdi></small></div></div>
             {currentMember ? <>
@@ -157,7 +153,10 @@ export default function Group() {
             <button className="button secondary full-width" disabled={group.detailsUnavailable}
               onClick={() => setRatings({ ...group.ratings })}>Edit group ratings</button>
           </div>
-        </Section>
+        </details>
+      </aside>
+    </div>
+    {settingsOpen && <Modal title="Group settings" onClose={() => setSettingsOpen(false)}>
         <Section title="Team balancing rating">
           <div className="panel rating-source-panel">
             <p className="muted">Choose which rating balances team proposals.</p>
@@ -173,9 +172,7 @@ export default function Group() {
             {sourceError?.key === detailsKey && <p className="error" role="alert">{sourceError.message}</p>}
           </div>
         </Section>
-      </aside>
-    </div>
-    {creating && <CreateGameForm groupId={groupId} onClose={() => setCreating(false)} />}
+    </Modal>}
     {inviting && <Modal title="Invite players" onClose={() => setInviting(false)}>
       {inviteLoading && <p className="muted">Getting invite link...</p>}
       {inviteLink && <div className="form">

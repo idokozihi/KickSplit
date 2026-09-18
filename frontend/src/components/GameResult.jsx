@@ -77,23 +77,24 @@ export default function GameResult({ game, user, availabilityKnown = false }) {
       <span className="result-chevron" aria-hidden="true">{expanded ? "−" : "+"}</span>
     </button>
     {expanded && <div className="result-body">
-    {state.result ? <p role="status"><strong>Saved result:</strong> Proposal {proposals.find((proposal) => String(proposal.id) === String(state.result.proposalId))?.proposalNumber ?? ""} · Team 1: {state.result.team1Wins} · Team 2: {state.result.team2Wins} · Team 3: {state.result.team3Wins} wins</p>
+    {state.result ? <p role="status"><strong>Saved result:</strong> Proposal {proposals.find((proposal) => String(proposal.id) === String(state.result.proposalId))?.proposalNumber ?? ""} · Red {state.result.team1Wins} · Black {state.result.team2Wins} · White {state.result.team3Wins} wins</p>
       : <p className="muted">Result not entered</p>}
     <form className="form" onSubmit={submit}>
       <p>Choose the lineup that was played:</p>
+      <div className="proposal-selector" role="group" aria-label="Played proposal">
+        {proposals.map((proposal, index) => <button type="button" key={proposal.id} className={proposalId === String(proposal.id) ? "active" : ""} aria-pressed={proposalId === String(proposal.id)} onClick={() => setProposalId(String(proposal.id))}>Proposal {proposal.proposalNumber ?? index + 1}</button>)}
+      </div>
       <div className="proposals">
-        {proposals.map((proposal, index) => <section className="proposal" key={proposal.id}>
+        {selected && <section className="proposal" key={selected.id}>
           <header className="proposal-heading">
-            <span className="proposal-number">{String(proposal.proposalNumber ?? index + 1).padStart(2, "0")}</span>
-            <h3>Proposal {proposal.proposalNumber ?? index + 1}</h3>
-            <label className="result-choice"><input type="radio" name="playedProposal" value={proposal.id}
-              checked={proposalId === String(proposal.id)} onChange={() => setProposalId(String(proposal.id))} /> Played lineup</label>
+            <span className="proposal-number">{String(selected.proposalNumber).padStart(2, "0")}</span>
+            <h3>Proposal {selected.proposalNumber}</h3>
           </header>
-          <ProposalTeams teams={proposal.teams} user={user} />
-        </section>)}
+          <ProposalTeams teams={selected.teams} user={user} />
+        </section>}
       </div>
       <div className="result-wins">
-        {wins.map((value, index) => <label key={index}>Team {index + 1} wins
+        {wins.map((value, index) => <label key={index}>{["Red", "Black", "White"][index]} team wins
           <input type="number" min="0" step="1" required value={value}
             onChange={(event) => setWins((current) => current.map((item, i) => i === index ? event.target.value : item))} />
         </label>)}

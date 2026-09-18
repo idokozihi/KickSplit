@@ -17,9 +17,7 @@ export default function Home() {
   return (
     <>
       <PageHeading
-        eyebrow="YOUR FOOTBALL, TOGETHER"
         title={`Hey, ${user.name.split(" ")[0]}.`}
-        subtitle="A little less organising. A lot more football."
         action={
           <span className="date-chip">
             {new Date().toLocaleDateString("en-GB", {
@@ -91,19 +89,7 @@ export default function Home() {
               />
             )}
           </Section>
-          <div className="play-note">
-            <Icon name="ball" size={32} />
-            <h2>
-              Same crew.
-              <br />
-              New game.
-            </h2>
-            <p>Keep the weekly tradition going.</p>
-            <Link className="text-link" to="/groups">
-              Get your group together
-              <Icon name="arrow" size={17} />
-            </Link>
-          </div>
+          <Link className="play-note" to="/groups"><Icon name="ball" size={22} /><span>Same crew. New game.</span><Icon name="arrow" size={17} /></Link>
         </aside>
       </div>
     </>

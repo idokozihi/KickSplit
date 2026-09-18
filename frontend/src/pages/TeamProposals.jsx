@@ -9,13 +9,14 @@ import { goingPlayers, makeProposals, dayGame } from "../state/mock";
 import { BackLink, EmptyState, PageHeading } from "../components/UI";
 import ProposalTeams from "../components/ProposalTeams";
 
-export default function TeamProposals() {
+export default function TeamProposals({ embedded = false, onRegenerated }) {
   const { gameId } = useParams();
   const [search] = useSearchParams();
   const { games, groups, user, cacheGame } = useApp();
   const source = games.find((item) => item.id === gameId);
   const [result, setResult] = useState(null);
   const [retry, setRetry] = useState(0);
+  const [selectedProposal, setSelectedProposal] = useState(0);
   const [regeneration, setRegeneration] = useState(null);
   const [regenerationRetry, setRegenerationRetry] = useState(0);
   const regenerationSaving = useRef(false);
@@ -52,6 +53,7 @@ export default function TeamProposals() {
       if (status.regenerated) {
         setResult((previous) => previous?.key === requestKey ? { ...previous, proposals: status.proposals } : previous);
         voting.resetVotes();
+        onRegenerated?.();
       }
       setRegeneration({ key: regenerationKey, status, success: status.regenerated });
     } catch (error) {
@@ -110,17 +112,20 @@ export default function TeamProposals() {
   const group = groups.find((item) => item.id === game.groupId);
   return (
     <>
-      <BackLink to={`/games/${gameId}?day=${game.day.id}`}>Back to game</BackLink>
-      <PageHeading
+      {!embedded && <BackLink to={`/games/${gameId}?day=${game.day.id}`}>Back to game</BackLink>}
+      {!embedded && <PageHeading
         eyebrow={<bdi>{group?.name || game.groupName}</bdi>}
         title={backendBacked ? "Your team proposals." : "Three ways to play."}
         subtitle={<><bdi>{game.title}</bdi> · {playerCount} available players, including guests</>}
-      />
-      <p className="proposal-intro">
+      />}
+      {!embedded && <p className="proposal-intro">
         {backendBacked ? `${proposals.length} ${proposals.length === 1 ? "balanced lineup" : "balanced lineups"} for ${playerCount} participants. Take a look and find your match.` : players.length === 3
           ? "With three players, each team has one player. Proposals vary which numbered team each player joins."
           : "Same players. Three different lineups. Take a look and find your match."}
-      </p>
+      </p>}
+      <div className="proposal-selector" role="group" aria-label="Team proposals">
+        {proposals.map((proposal, index) => <button key={proposal.id ?? index} aria-pressed={selectedProposal === index} className={selectedProposal === index ? "active" : ""} onClick={() => setSelectedProposal(index)}>Proposal {proposal.proposalNumber ?? index + 1}</button>)}
+      </div>
       {backendBacked && <section className="regeneration-panel" aria-label="New teams">
         <div>
           <h2>New teams</h2>
@@ -148,6 +153,7 @@ export default function TeamProposals() {
       </div>}
       <div className="proposals">
         {proposals.map(({ id, proposalNumber, teams, balanceScore }, index) => {
+          if (index !== Math.min(selectedProposal, proposals.length - 1)) return null;
           const { count, selected } = proposalVoteState(voting.votes || [], id, voting.userId);
           return (
           <section className="proposal" key={backendBacked ? id : index}>
@@ -155,7 +161,7 @@ export default function TeamProposals() {
               <span className="proposal-number">{String(proposalNumber ?? index + 1).padStart(2, "0")}</span>
               <div>
                 <h2>Proposal {proposalNumber ?? index + 1}</h2>
-                {backendBacked && <small>Balance score: {balanceScore}</small>}
+                {backendBacked && <small>Balance score: {Number(balanceScore).toFixed(2)}</small>}
                 <p>
                   {
                     [
@@ -169,20 +175,20 @@ export default function TeamProposals() {
               <span className="badge neutral">3 teams</span>
             </header>
             <ProposalTeams teams={teams} user={user} />
-            {backendBacked && <div className="section-heading">
-              <span aria-live="polite">{voting.votes ? `${count} ${count === 1 ? "vote" : "votes"}` : "Votes unavailable"}</span>
+            {backendBacked && <div className="section-heading proposal-vote-bar">
+              <span aria-live="polite">{voting.votes ? `${count} ${count === 1 ? "player chose" : "players chose"} this lineup` : "Votes unavailable"}</span>
               <button className={`button ${selected ? "secondary" : "primary"}`}
                 aria-pressed={selected}
                 aria-label={`${selected ? "Voted for" : "Vote for"} proposal ${proposalNumber ?? index + 1}`}
                 disabled={!voting.votes || voting.saving || currentRegeneration?.saving || selected}
                 onClick={() => voting.vote(id)}>
-                {selected ? "✓ Voted" : "Vote"}
+                {selected ? "✓ Your choice" : "Choose this lineup"}
               </button>
             </div>}
           </section>
         ); })}
       </div>
-      <p className="form-hint">{backendBacked ? "Teams balanced using player ratings." : "Demo preview · Example lineups only."}</p>
+      {!embedded && <p className="form-hint">{backendBacked ? "Teams balanced using player ratings." : "Demo preview · Example lineups only."}</p>}
     </>
   );
 }

@@ -9,9 +9,7 @@ export default function Groups() {
   return (
     <>
       <PageHeading
-        eyebrow="THE PEOPLE YOU PLAY WITH"
         title="Your groups"
-        subtitle="The usual faces. The best part of your week."
         action={
           <div className="actions">
             <button

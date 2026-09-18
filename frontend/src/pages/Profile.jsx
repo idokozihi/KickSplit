@@ -10,9 +10,7 @@ export default function Profile() {
   return (
     <>
       <PageHeading
-        eyebrow="THE PLAYER BEHIND THE NAME"
         title="Your profile"
-        subtitle="A familiar face in every group."
       />
       <div className="profile-card">
         <div className="profile-cover" />
