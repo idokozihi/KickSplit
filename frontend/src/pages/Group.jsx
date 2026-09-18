@@ -127,22 +127,26 @@ export default function Group() {
   if (!group) return <EmptyState title="Group not found" description="This group could not be found on the server." to="/groups" action="Your groups" />;
 
   const scheduled = rankedDays(games.filter((game) => game.groupId === groupId));
-  return <>
+  return <div className="group-screen">
     <BackLink to="/groups">Your groups</BackLink>
     <header className="group-hero">
-      <GroupImage group={group} large />
-      <div>
+      <div className="group-hero-identity">
+        <GroupImage group={group} large />
         <h1><bdi>{group.name}</bdi></h1>
-        <p>{group.description}</p>
         <span className="group-member-count"><Icon name="groups" size={17} />
           {members ? `${members.length} ${members.length === 1 ? "member" : "members"}`
             : currentDetails?.error ? "Members unavailable" : "Members loading"}</span>
+        {group.description && <p>{group.description}</p>}
       </div>
-      <div className="group-actions"><Link className="button primary" to={`/groups/${groupId}/chat`}><Icon name="chat" size={18} />Chat</Link><button className="button secondary" onClick={openInvite}>Invite players</button><button className="button secondary" onClick={() => setSettingsOpen(true)}>⚙ Group settings</button></div>
+      <div className="group-actions">
+        <button className="group-hero-action" onClick={openInvite}><Icon name="plus" size={17} /><span>Invite</span></button>
+        <Link className="group-hero-action" to={`/groups/${groupId}/chat`}><Icon name="chat" size={17} /><span>Chat</span></Link>
+        <button className="group-hero-action" onClick={() => setSettingsOpen(true)}><Icon name="settings" size={17} /><span>Settings</span></button>
+      </div>
     </header>
-    <div className="home-grid">
+    <div className="group-detail-layout">
       <div>
-        <Section title="Proposed days">
+        <Section title="Next 14 days">
           <GroupDateSelector groupId={groupId} scheduled={scheduled} />
           {scheduled[0] && <Link className="popular-game-row" to={`/games/${scheduled[0].game.id}?day=${scheduled[0].day.id}`}>
             <span className="popular-game-icon"><Icon name="games" size={20} /></span>
@@ -241,5 +245,5 @@ export default function Group() {
         <button className="button primary">Save ratings</button>
       </form>
     </Modal>}
-  </>;
+  </div>;
 }

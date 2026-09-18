@@ -43,16 +43,18 @@ export default function Games() {
     return () => controller.abort();
   }, [pastIds, pastOpen, retry]);
   return (
-    <>
-      <PageHeading
-        title="Your games"
-      />
+    <div className="games-screen">
+      <PageHeading title="Your games" subtitle="Your upcoming kickoffs and results" />
+      <div className="games-section-switch" aria-label="Game sections">
+        <span className="active">Proposed days <b>{scheduled.length}</b></span>
+        <button type="button" onClick={() => setPastOpen((value) => !value)} aria-expanded={pastOpen}>Past games <b>{past.length}</b></button>
+      </div>
       <Section
         title={`Proposed days${scheduled.length ? ` ֲ· ${scheduled.length}` : ""}`}
       >
         {(gamesError || groupsError) && <p className="error" role="alert">{gamesError || groupsError}</p>}
         {gamesLoading ? <EmptyState title="Loading games..." /> : scheduled.length ? (
-          <div className="cards-grid">
+          <div className="game-row-list">
             {scheduled.map(({ game, day, popular }) => (
               <GameCard game={game} day={day} popular={popular} loadGuestList={game.backendBacked} key={`${game.id}-${day.id}`} />
             ))}
@@ -66,26 +68,26 @@ export default function Games() {
           />
         )}
       </Section>
-      <section className="section collapsible-section"><button className="collapse-trigger" aria-expanded={pastOpen} onClick={() => setPastOpen((value) => !value)}>Past games · {past.length}<span>{pastOpen ? "⌃" : "⌄"}</span></button>
+      <section className="section past-games-section">
       {pastOpen && <>
-        {gamesLoading ? <EmptyState title="Loading games..." /> : past.length ? <div className="cards-grid">
+        <h2>Past games</h2>
+        {gamesLoading ? <EmptyState title="Loading games..." /> : past.length ? <div className="game-row-list">
           {past.map(({ game, day }) => {
             const entry = results[game.id];
             const teamNames = groupTeamColors(groups.find((group) => group.id === String(game.groupId))).map((color) => TEAM_COLOR_OPTIONS[color].label);
             const date = new Date(day.date.includes("T") ? day.date : `${day.date}T00:00:00`);
             return <article className="game-card past-game-card" key={`${game.id}-${day.id}`}>
               <div className="game-date-block" aria-hidden="true"><small>{date.toLocaleDateString("en-GB", { weekday: "short" })}</small><strong>{date.getDate()}</strong><small>{date.toLocaleDateString("en-GB", { month: "short" })}</small></div>
-              <h3><Link to={`/games/${game.id}?day=${day.id}`}><bdi>{game.title}</bdi></Link></h3>
-              <p className="muted">{game.groupName} ֲ· {proposedDate(day.date)}</p>
+              <div className="game-card-content"><span className="group-label">{game.groupName}</span><h3><Link to={`/games/${game.id}?day=${day.id}`}><bdi>{game.title}</bdi></Link></h3><p className="muted">{proposedDate(day.date)}</p>
               {entry?.error ? <><p className="error" role="alert">{entry.error}</p><button className="button secondary" onClick={() => setRetry((value) => value + 1)}>Retry</button></>
                 : <p>{game.backendBacked && !entry ? "Loading result..." : entry?.result
                   ? `${teamNames[0]} ${entry.result.team1Wins} ֲ· ${teamNames[1]} ${entry.result.team2Wins} ֲ· ${teamNames[2]} ${entry.result.team3Wins} wins`
-                  : "Result not entered"}</p>}
-              <Link className="text-link" to={`/games/${game.id}?day=${day.id}`}>View game</Link>
+                  : "Result not entered"}</p>}</div>
+              <Link className="circle-arrow" to={`/games/${game.id}?day=${day.id}`} aria-label={`View ${game.title}`}><span aria-hidden="true">›</span></Link>
             </article>;
           })}
         </div> : <EmptyState title="No past games yet" />}
       </>}</section>
-    </>
+    </div>
   );
 }

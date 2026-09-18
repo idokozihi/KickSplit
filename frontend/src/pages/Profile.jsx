@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useApp } from "../state/context";
-import { Avatar, Modal, PageHeading } from "../components/UI";
+import { Avatar, Icon, Modal, PageHeading } from "../components/UI";
 import { ProfileForm } from "../components/Forms";
 
 export default function Profile() {
@@ -8,16 +8,17 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
   return (
-    <>
+    <div className="profile-screen">
       <PageHeading
         title="Your profile"
       />
-      <div className="profile-card">
-        <div className="profile-cover" />
-        <div className="profile-card-body">
+      <div className="profile-layout">
+        <header className="profile-hero">
           <Avatar name={user.name} photo={user.photo} large />
-          <h2>{user.name}</h2>
-          <p className="muted">@{user.username || "player"}</p>
+          <div><span className="profile-hero-label">PLAYER PROFILE</span><h2>{user.name}</h2><p>@{user.username || "player"}</p></div>
+        </header>
+        <section className="profile-information" aria-label="Your information">
+          <div className="section-heading"><h2>Your information</h2><Icon name="profile" size={18} /></div>
           <dl className="profile-details">
             <div>
               <dt>Full name</dt>
@@ -33,7 +34,7 @@ export default function Profile() {
             </div>
           </dl>
           <button
-            className="button primary"
+            className="button primary profile-edit"
             onClick={() => {
               setEditing(true);
               setSaved(false);
@@ -46,7 +47,7 @@ export default function Profile() {
               Profile updated.
             </p>
           )}
-        </div>
+        </section>
       </div>
       {editing && (
         <Modal title="Edit your profile" onClose={() => setEditing(false)}>
@@ -59,6 +60,6 @@ export default function Profile() {
           />
         </Modal>
       )}
-    </>
+    </div>
   );
 }

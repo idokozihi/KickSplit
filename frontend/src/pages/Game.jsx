@@ -12,7 +12,6 @@ import {
   EmptyState,
   Icon,
   Modal,
-  PageHeading,
   Section,
 } from "../components/UI";
 
@@ -137,17 +136,17 @@ export default function Game() {
     setAddingGuest(false);
   }
   return (
-    <>
+    <div className="game-screen">
       <BackLink to="/games">Your games</BackLink>
-      <PageHeading
-        title={game.title}
-        subtitle={
-          <Link className="text-link" to={`/groups/${group.id}`}>
-            <bdi>{group.name}</bdi>
-            <Icon name="arrow" size={16} />
-          </Link>
-        }
-      />
+      <header className="game-page-header">
+        <span className="game-page-kicker"><Link to={`/groups/${group.id}`}><bdi>{group.name}</bdi></Link></span>
+        <h1><bdi>{game.title}</bdi></h1>
+        <div className="game-page-context">
+          <span><Icon name="games" size={15} />{date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</span>
+          {game.date.includes("T") && <span><Icon name="clock" size={15} />{date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>}
+          <span><Icon name="groups" size={15} />{going.length}/{game.target} available</span>
+        </div>
+      </header>
       <div className="app-tabs" role="group" aria-label="Game sections">
         {[["lineup", "Lineup"], ["teams", "Teams"], ["info", "Info"]].map(([value, label]) => <button key={value} aria-pressed={tab === value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}>{label}</button>)}
       </div>
@@ -191,7 +190,7 @@ export default function Game() {
       <p className="game-info-group">Group: <Link className="text-link" to={`/groups/${group.id}`}>{group.name}</Link></p>
       </>}
       {tab === "lineup" && <>
-      <div className="home-grid">
+      <div className="game-lineup-layout">
         <div>
           <Section title="Your availability">
             <ProposedDays game={source} allowProposing selectedDayId={game.day.id} registrationStatus={registrationStatus} />
@@ -307,6 +306,6 @@ export default function Game() {
           </form>
         </Modal>
       )}
-    </>
+    </div>
   );
 }

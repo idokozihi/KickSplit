@@ -24,6 +24,7 @@ export function Icon({ name = "ball", size = 22, ...props }) {
       </>
     ),
     chat: <path d="M4 5h16v12H8l-4 3V5Z" />,
+    settings: <><circle cx="12" cy="12" r="3" /><path d="M10 3h4l.5 2.1 1.6.7 1.9-1.1 2.8 2.8-1.1 1.9.7 1.6 2.1.5v4l-2.1.5-.7 1.6 1.1 1.9-2.8 2.8-1.9-1.1-1.6.7L14 21h-4l-.5-2.1-1.6-.7-1.9 1.1-2.8-2.8 1.1-1.9-.7-1.6L1.5 14v-4l2.1-.5.7-1.6-1.1-1.9L6 3.2l1.9 1.1 1.6-.7L10 3Z" /></>,
     profile: (
       <>
         <circle cx="12" cy="8" r="4" />
@@ -228,22 +229,20 @@ export function GameCard({ game, day = gameDays(game)[0], popular = false, featu
         <strong>{calendarDate.getDate()}</strong>
         <small>{calendarDate.toLocaleDateString("en-GB", { month: "short" })}</small>
       </div>
-      <div className="game-card-top">
-        <span className="group-label"><bdi>{group?.name}</bdi></span>
-        {featured ? <span className="badge GOING">Next game</span> : popular && <span className="badge GOING">Most popular</span>}
+      <div className="game-card-content">
+        <div className="game-card-top">
+          <span className="group-label"><bdi>{group?.name || game.groupName}</bdi></span>
+          {featured ? <span className="badge GOING">Next game</span> : popular && <span className="badge GOING">Most popular</span>}
+        </div>
+        <h3><Link to={`/games/${game.id}?day=${day.id}`}><bdi>{game.title}</bdi></Link></h3>
+        <div className="game-meta">
+          <span>{proposedDate(day.date)}</span>
+          {day.date.includes("T") && <span>{new Date(day.date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>}
+          <span aria-live="polite">{guestsLoading ? (guestFailure ? "Participants unavailable" : "Loading participants...") : `${count} ${count === 1 ? "participant" : "participants"}`}</span>
+        </div>
+        {!game.backendBacked && <p className="form-hint">Proposed by <bdi>{day.proposedBy.id === "me" ? user.name : day.proposedBy.name}</bdi></p>}
       </div>
-      <h3><Link to={`/games/${game.id}?day=${day.id}`}><bdi>{game.title}</bdi></Link></h3>
-      <div className="game-meta">
-        <span><Icon name="games" size={17} />{proposedDate(day.date)}</span>
-        {day.date.includes("T") && <span><Icon name="clock" size={17} />
-          {new Date(day.date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-        </span>}
-      </div>
-      {!game.backendBacked && <p className="form-hint">Proposed by <bdi>{day.proposedBy.id === "me" ? user.name : day.proposedBy.name}</bdi></p>}
-      <div className="game-card-bottom">
-        <span aria-live="polite"><Icon name="groups" size={18} />{guestsLoading ? (guestFailure ? "Participant count unavailable" : "Loading participants...") : <><b>{count}</b> {count === 1 ? "participant" : "participants"}</>}</span>
-        <Link className="circle-arrow" to={`/games/${game.id}?day=${day.id}`} aria-label={`View ${game.title}, ${proposedDate(day.date)}`}><Icon name="arrow" size={20} /></Link>
-      </div>
+      <Link className="circle-arrow" to={`/games/${game.id}?day=${day.id}`} aria-label={`View ${game.title}, ${proposedDate(day.date)}`}><Icon name="arrow" size={18} /></Link>
       <div className="rsvp-options availability-options" role="group" aria-label={`Your availability for ${proposedDate(day.date)}`}>
         {[
           { value: "AVAILABLE", label: "Available", style: "GOING", icon: "check" },
@@ -273,13 +272,11 @@ export function GroupCard({ group, showMemberCount = false, memberCount }) {
   return (
     <Link to={`/groups/${group.id}`} className="group-card">
       <GroupImage group={group} />
-      <div>
+      <div className="group-card-copy">
         <h3><bdi>{group.name}</bdi></h3>
         <p>{showMemberCount ? memberCount === undefined ? "Loading members..." : memberCount === null ? "Members unavailable" : `${memberCount} ${memberCount === 1 ? "member" : "members"}`
           : proposals.length ? `${proposals.length} proposed ${proposals.length === 1 ? "day" : "days"}` : "No days proposed yet"}</p>
-        <small>
-          {showMemberCount ? proposals.length ? `${proposals.length} proposed ${proposals.length === 1 ? "day" : "days"}` : "No days proposed yet" : "View group"}
-        </small>
+        {showMemberCount && <small>{proposals.length ? `${proposals.length} proposed ${proposals.length === 1 ? "day" : "days"}` : "No days proposed yet"}</small>}
       </div>
       <Icon name="arrow" size={18} />
     </Link>

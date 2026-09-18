@@ -6,7 +6,7 @@ import { useApp } from "../state/context";
 import { useVotes } from "../state/useVotes";
 import { proposalVoteState } from "../state/votesApi";
 import { goingPlayers, makeProposals, dayGame } from "../state/mock";
-import { BackLink, EmptyState, PageHeading } from "../components/UI";
+import { BackLink, EmptyState } from "../components/UI";
 import ProposalTeams from "../components/ProposalTeams";
 
 export default function TeamProposals({ embedded = false, onRegenerated }) {
@@ -111,18 +111,10 @@ export default function TeamProposals({ embedded = false, onRegenerated }) {
   const playerCount = backendBacked ? proposals[0].teams.flat().length : players.length;
   const group = groups.find((item) => item.id === game.groupId);
   return (
-    <>
+    <div className="teams-screen">
       {!embedded && <BackLink to={`/games/${gameId}?day=${game.day.id}`}>Back to game</BackLink>}
-      {!embedded && <PageHeading
-        eyebrow={<bdi>{group?.name || game.groupName}</bdi>}
-        title={backendBacked ? "Your team proposals." : "Three ways to play."}
-        subtitle={<><bdi>{game.title}</bdi> · {playerCount} available players, including guests</>}
-      />}
-      {!embedded && <p className="proposal-intro">
-        {backendBacked ? `${proposals.length} ${proposals.length === 1 ? "balanced lineup" : "balanced lineups"} for ${playerCount} participants. Take a look and find your match.` : players.length === 3
-          ? "With three players, each team has one player. Proposals vary which numbered team each player joins."
-          : "Same players. Three different lineups. Take a look and find your match."}
-      </p>}
+      {!embedded && <header className="game-page-header"><span className="game-page-kicker"><bdi>{group?.name || game.groupName}</bdi></span><h1>Team lineups</h1><p className="teams-context"><bdi>{game.title}</bdi> · {playerCount} available players, including guests</p></header>}
+      {embedded && <p className="teams-context">{playerCount} available players · {proposals.length} {proposals.length === 1 ? "lineup" : "lineups"}</p>}
       <div className="proposal-selector" role="group" aria-label="Team proposals">
         {proposals.map((proposal, index) => <button key={proposal.id ?? index} aria-pressed={selectedProposal === index} className={selectedProposal === index ? "active" : ""} onClick={() => setSelectedProposal(index)}>Proposal {proposal.proposalNumber ?? index + 1}</button>)}
       </div>
@@ -137,24 +129,8 @@ export default function TeamProposals({ embedded = false, onRegenerated }) {
           if (index !== Math.min(selectedProposal, proposals.length - 1)) return null;
           const { count, selected } = proposalVoteState(voting.votes || [], id, voting.userId);
           return (
-          <section className="proposal" key={backendBacked ? id : index}>
-            <header className="proposal-heading">
-              <span className="proposal-number">{String(proposalNumber ?? index + 1).padStart(2, "0")}</span>
-              <div>
-                <h2>Proposal {proposalNumber ?? index + 1}</h2>
-                {backendBacked && <small>Balance score: {Number(balanceScore).toFixed(2)}</small>}
-                <p>
-                  {
-                    [
-                      "The first lineup",
-                      "A fresh combination",
-                      "One more possibility",
-                    ][index]
-                  }
-                </p>
-              </div>
-              <span className="badge neutral">3 teams</span>
-            </header>
+          <section className="proposal" key={backendBacked ? id : index} aria-label={`Proposal ${proposalNumber ?? index + 1}`}>
+            {backendBacked && <div className="proposal-score"><span>Proposal {proposalNumber ?? index + 1}</span><span>Balance score <strong>{Number(balanceScore).toFixed(2)}</strong></span></div>}
             <ProposalTeams teams={teams} groupId={game.groupId} />
             {backendBacked && <div className="section-heading proposal-vote-bar">
               <span aria-live="polite">{voting.votes ? `${count} ${count === 1 ? "player chose" : "players chose"} this lineup` : "Votes unavailable"}</span>
@@ -189,6 +165,6 @@ export default function TeamProposals({ embedded = false, onRegenerated }) {
           </button>}
       </section>}
       {!embedded && <p className="form-hint">{backendBacked ? "Teams balanced using player ratings." : "Demo preview · Example lineups only."}</p>}
-    </>
+    </div>
   );
 }

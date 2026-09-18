@@ -4,7 +4,7 @@ import { EmptyState, GroupImage, Icon, PageHeading } from "../components/UI";
 
 export default function Chats() {
   const { groups, groupsLoading, groupsError } = useApp();
-  return <>
+  return <div className="chat-list-screen">
     <PageHeading title="Chats" subtitle="Your group conversations" />
     {groupsError && <p className="error" role="alert">{groupsError}</p>}
     {groupsLoading ? <EmptyState title="Loading groups..." /> : groups.length ?
@@ -15,5 +15,5 @@ export default function Chats() {
           <Icon name="arrow" size={18} />
         </Link>)}
       </div> : !groupsError && <EmptyState title="No group chats yet" description="Join or create a group to start a conversation." to="/groups" action="Go to groups" />}
-  </>;
+  </div>;
 }

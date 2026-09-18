@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useApp } from "../state/context";
 import { groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
+import { Avatar } from "./UI";
 
 export default function ProposalTeams({ teams, groupId }) {
   const { groups } = useApp();
@@ -30,12 +31,11 @@ export default function ProposalTeams({ teams, groupId }) {
       {teams.map((team, teamIndex) => {
         const color = TEAM_COLOR_OPTIONS[colors[teamIndex]];
         return <section className="pitch-slide" key={teamIndex} aria-label={`${color.label} team, ${team.length} players`}>
-          <div className="pitch-header"><strong>{color.label} team</strong><span>{team.length} {team.length === 1 ? "player" : "players"}</span></div>
           <div className="football-pitch" style={{ "--kit": color.kit, "--kit-ink": color.ink, "--pitch-rows": Math.ceil(team.length / 3) }}>
             <div className="pitch-lines" aria-hidden="true" />
             <div className="pitch-players">
               {team.map((player, index) => <div className="pitch-player" key={`${player.id}-${index}`}>
-                <span className="player-shirt" aria-hidden="true">{index + 1}</span>
+                <Avatar name={player.name} photo={player.photo || player.imageUrl} />
                 <strong>{player.name}</strong>
                 {(player.isCurrentUser || player.id === "me" || player.guest) && <small>{player.guest ? "Guest" : "You"}</small>}
               </div>)}

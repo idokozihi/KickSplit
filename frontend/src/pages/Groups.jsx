@@ -20,30 +20,15 @@ export default function Groups() {
     return () => controller.abort();
   }, [groupIds]);
   return (
-    <>
-      <PageHeading
-        title="Your groups"
-        action={
-          <div className="actions">
-            <button
-              className="button secondary"
-              onClick={() => setFlow("join")}
-            >
-              Join group
-            </button>
-            <button
-              className="button primary"
-              onClick={() => setFlow("create")}
-            >
-              <Icon name="plus" size={18} />
-              Create group
-            </button>
-          </div>
-        }
-      />
+    <div className="groups-screen">
+      <PageHeading title="Your groups" subtitle="Your football crews" />
+      <div className="group-list-actions">
+        <button className="button primary" onClick={() => setFlow("create")}><Icon name="plus" size={16} />Create group</button>
+        <button className="button secondary" onClick={() => setFlow("join")}>Join group</button>
+      </div>
       {groupsError && <p className="error" role="alert">{groupsError}</p>}
       {groupsLoading ? <EmptyState title="Loading groups..." /> : groups.length ? (
-        <div className="cards-grid">
+        <div className="group-row-list">
           {groups.map((group) => (
             <GroupCard key={group.id} group={group} showMemberCount memberCount={memberCounts[group.id]} />
           ))}
@@ -62,6 +47,6 @@ export default function Groups() {
         </p>
       </div>
       {flow && <GroupFlow mode={flow} onClose={() => setFlow(null)} />}
-    </>
+    </div>
   );
 }
