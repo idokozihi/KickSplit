@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useApp } from "../state/context";
-import { rankedDays } from "../state/mock";
+import { participantCount, proposedDate, rankedDays } from "../state/mock";
 import { loadGroup, loadGroupMembers, loadInviteToken, saveRatingSource, saveTeamColors } from "../state/groupsApi";
 import { inviteUrl } from "../state/invite";
 import { Avatar, BackLink, EmptyState, GroupImage, Icon, Modal, Section } from "../components/UI";
@@ -138,12 +138,17 @@ export default function Group() {
           {members ? `${members.length} ${members.length === 1 ? "member" : "members"}`
             : currentDetails?.error ? "Members unavailable" : "Members loading"}</span>
       </div>
+      <div className="group-actions"><Link className="button primary" to={`/groups/${groupId}/chat`}><Icon name="chat" size={18} />Chat</Link><button className="button secondary" onClick={openInvite}>Invite players</button><button className="button secondary" onClick={() => setSettingsOpen(true)}>⚙ Group settings</button></div>
     </header>
-    <div className="group-actions"><Link className="button primary" to={`/groups/${groupId}/chat`}><Icon name="chat" size={18} />Chat</Link><button className="button secondary" onClick={openInvite}>Invite players</button><button className="button secondary" onClick={() => setSettingsOpen(true)}>⚙ Group settings</button></div>
     <div className="home-grid">
       <div>
         <Section title="Proposed days">
           <GroupDateSelector groupId={groupId} scheduled={scheduled} />
+          {scheduled[0] && <Link className="popular-game-row" to={`/games/${scheduled[0].game.id}?day=${scheduled[0].day.id}`}>
+            <span className="popular-game-icon"><Icon name="games" size={20} /></span>
+            <span><small>Most popular day</small><strong>{proposedDate(scheduled[0].day.date)}</strong><small>{participantCount(scheduled[0].day)} participants · {scheduled[0].game.title}</small></span>
+            <Icon name="arrow" size={18} />
+          </Link>}
         </Section>
         <details className="collapsible-section"><summary>Members {members ? `· ${members.length}` : ""}<span>⌄</span></summary>
           {!currentDetails && <p className="muted" role="status">Loading members...</p>}

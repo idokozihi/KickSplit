@@ -72,7 +72,9 @@ export default function Games() {
           {past.map(({ game, day }) => {
             const entry = results[game.id];
             const teamNames = groupTeamColors(groups.find((group) => group.id === String(game.groupId))).map((color) => TEAM_COLOR_OPTIONS[color].label);
-            return <article className="game-card" key={`${game.id}-${day.id}`}>
+            const date = new Date(day.date.includes("T") ? day.date : `${day.date}T00:00:00`);
+            return <article className="game-card past-game-card" key={`${game.id}-${day.id}`}>
+              <div className="game-date-block" aria-hidden="true"><small>{date.toLocaleDateString("en-GB", { weekday: "short" })}</small><strong>{date.getDate()}</strong><small>{date.toLocaleDateString("en-GB", { month: "short" })}</small></div>
               <h3><Link to={`/games/${game.id}?day=${day.id}`}><bdi>{game.title}</bdi></Link></h3>
               <p className="muted">{game.groupName} ֲ· {proposedDate(day.date)}</p>
               {entry?.error ? <><p className="error" role="alert">{entry.error}</p><button className="button secondary" onClick={() => setRetry((value) => value + 1)}>Retry</button></>

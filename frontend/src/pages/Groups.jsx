@@ -1,11 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "../state/context";
+import { loadGroupMembers } from "../state/groupsApi";
 import { EmptyState, GroupCard, Icon, PageHeading } from "../components/UI";
 import { GroupFlow } from "../components/Forms";
 
 export default function Groups() {
   const { groups, groupsLoading, groupsError } = useApp();
   const [flow, setFlow] = useState(null);
+  const [memberCounts, setMemberCounts] = useState({});
+  const groupIds = groups.map((group) => group.id).sort().join(",");
+  useEffect(() => {
+    if (!groupIds) return;
+    const controller = new AbortController();
+    groupIds.split(",").forEach((id) => {
+      loadGroupMembers(id, controller.signal)
+        .then((members) => { if (!controller.signal.aborted) setMemberCounts((current) => ({ ...current, [id]: members.length })); })
+        .catch(() => { if (!controller.signal.aborted) setMemberCounts((current) => ({ ...current, [id]: null })); });
+    });
+    return () => controller.abort();
+  }, [groupIds]);
   return (
     <>
       <PageHeading
@@ -32,7 +45,7 @@ export default function Groups() {
       {groupsLoading ? <EmptyState title="Loading groups..." /> : groups.length ? (
         <div className="cards-grid">
           {groups.map((group) => (
-            <GroupCard key={group.id} group={group} />
+            <GroupCard key={group.id} group={group} showMemberCount memberCount={memberCounts[group.id]} />
           ))}
         </div>
       ) : !groupsError && (

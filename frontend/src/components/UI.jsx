@@ -220,11 +220,17 @@ export function GameCard({ game, day = gameDays(game)[0], popular = false, featu
   }
   const group = groups.find((item) => item.id === game.groupId);
   const count = participantCount(day);
+  const calendarDate = new Date(day.date.includes("T") ? day.date : `${day.date}T00:00:00`);
   return (
     <article className={`game-card ${featured ? "featured" : ""}`}>
+      <div className="game-date-block" aria-hidden="true">
+        <small>{calendarDate.toLocaleDateString("en-GB", { weekday: "short" })}</small>
+        <strong>{calendarDate.getDate()}</strong>
+        <small>{calendarDate.toLocaleDateString("en-GB", { month: "short" })}</small>
+      </div>
       <div className="game-card-top">
         <span className="group-label"><bdi>{group?.name}</bdi></span>
-        {popular && <span className="badge GOING">Most popular</span>}
+        {featured ? <span className="badge GOING">Next game</span> : popular && <span className="badge GOING">Most popular</span>}
       </div>
       <h3><Link to={`/games/${game.id}?day=${day.id}`}><bdi>{game.title}</bdi></Link></h3>
       <div className="game-meta">
@@ -261,7 +267,7 @@ export function GameCard({ game, day = gameDays(game)[0], popular = false, featu
     </article>
   );
 }
-export function GroupCard({ group }) {
+export function GroupCard({ group, showMemberCount = false, memberCount }) {
   const { games } = useApp();
   const proposals = rankedDays(games.filter((g) => g.groupId === group.id));
   return (
@@ -269,11 +275,10 @@ export function GroupCard({ group }) {
       <GroupImage group={group} />
       <div>
         <h3><bdi>{group.name}</bdi></h3>
-        <p>{group.detailsUnavailable ? "Members unavailable" : `${group.members.length} ${group.members.length === 1 ? "member" : "members"}`}</p>
+        <p>{showMemberCount ? memberCount === undefined ? "Loading members..." : memberCount === null ? "Members unavailable" : `${memberCount} ${memberCount === 1 ? "member" : "members"}`
+          : proposals.length ? `${proposals.length} proposed ${proposals.length === 1 ? "day" : "days"}` : "No days proposed yet"}</p>
         <small>
-          {proposals.length
-            ? `${proposals.length} proposed ${proposals.length === 1 ? "day" : "days"}`
-            : "No days proposed yet"}
+          {showMemberCount ? proposals.length ? `${proposals.length} proposed ${proposals.length === 1 ? "day" : "days"}` : "No days proposed yet" : "View group"}
         </small>
       </div>
       <Icon name="arrow" size={18} />
