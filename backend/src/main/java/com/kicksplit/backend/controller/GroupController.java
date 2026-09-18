@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kicksplit.backend.service.GroupService;
+import com.kicksplit.backend.dto.UpdateTeamColorsRequest;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,7 +22,6 @@ import com.kicksplit.backend.dto.GroupResponseDto;
 import com.kicksplit.backend.dto.JoinGroupRequest;
 import com.kicksplit.backend.dto.InviteTokenResponse;
 import com.kicksplit.backend.dto.UpdateRatingSourceRequest;
-
 
 @RestController
 @RequestMapping("/api/groups")
@@ -95,6 +95,21 @@ public class GroupController {
                 groupId,
                 request.userId(),
                 request.ratingSource());
+
+        return GroupResponseDto.fromGroup(group);
+    }
+
+    @PatchMapping("/{groupId}/team-colors")
+    public GroupResponseDto updateTeamColors(
+            @PathVariable Long groupId,
+            @RequestBody UpdateTeamColorsRequest request) {
+
+        Group group = groupService.updateTeamColors(
+                groupId,
+                request.userId(),
+                request.team1Color(),
+                request.team2Color(),
+                request.team3Color());
 
         return GroupResponseDto.fromGroup(group);
     }

@@ -7,7 +7,6 @@ import { MockContext } from "./context";
 import { initialState, stateForUser, createProposedDay, respondToDay, gameDays } from "./mock";
 import { loginUser, registerUser } from "./authApi";
 import { saveUserProfile } from "./usersApi";
-import { chooseTeamColor } from "./teamColors";
 
 export default function MockProvider({ children }) {
   const [data, setData] = useState(() => {
@@ -18,8 +17,6 @@ export default function MockProvider({ children }) {
     } catch { /* Start logged out when session storage is unavailable. */ }
     return initial;
   });
-  const [teamColorChoices, setTeamColorChoices] = useState({});
-  const setTeamColor = (groupId, index, color) => setTeamColorChoices((current) => chooseTeamColor(current, groupId, index, color));
   const activeUserId = useRef(data.user?.id);
   useEffect(() => {
     try {
@@ -67,7 +64,6 @@ export default function MockProvider({ children }) {
   const setAuthenticatedUser = (user) => {
     activeUserId.current = user.id;
     if (data.user?.id !== user.id) {
-      setTeamColorChoices({});
       setGroupsLoading(true);
       setGamesLoading(true);
       setGroupsError("");
@@ -106,6 +102,10 @@ export default function MockProvider({ children }) {
         group.id === id ? { ...group, ratings } : group,
       ),
     }));
+  const updateGroupDetails = useCallback((saved) => {
+    setData((current) => ({ ...current, groups: current.groups.map((group) => group.id === saved.id
+      ? { ...group, ratingSource: saved.ratingSource, teamColors: saved.teamColors } : group) }));
+  }, []);
   const addGame = async (input) => {
     const game = await createGame(input);
     setData((current) => ({ ...current, games: mergeGames(current.games, [game]) }));
@@ -193,6 +193,7 @@ export default function MockProvider({ children }) {
         register,
         addGroup,
         updateRatings,
+        updateGroupDetails,
         addGame,
         cacheGame,
         updateGame,
@@ -201,8 +202,6 @@ export default function MockProvider({ children }) {
         refreshRegistrations,
         refreshGuests,
         addBackendGuest,
-        teamColorChoices,
-        setTeamColor,
       }}
     >
       {children}

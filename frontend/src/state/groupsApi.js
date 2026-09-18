@@ -1,4 +1,5 @@
 import { apiUrl } from "./apiBase.js";
+import { colorsFromGroupDto, validTeamColors } from "./teamColors.js";
 
 async function request(path, options = {}) {
   let response;
@@ -10,6 +11,9 @@ async function request(path, options = {}) {
   if (!response.ok) {
     if (path.endsWith("/rating-source") && response.status === 403) {
       throw new Error("Only group admins can change the team balancing rating.");
+    }
+    if (path.endsWith("/team-colors") && response.status === 403) {
+      throw new Error("Only group admins can change team colors.");
     }
     if (path.startsWith("/groups/join/")) {
       let message = "";
@@ -42,6 +46,7 @@ export function mapGroup(dto) {
     color: "green",
     description: "Your crew. Your game.",
     ratingSource: dto.ratingSource || "APP_RATING",
+    teamColors: colorsFromGroupDto(dto),
     // The Groups DTO does not expose membership or player ratings.
     members: [],
     ratings: {},
@@ -67,6 +72,18 @@ export async function saveRatingSource(groupId, userId, ratingSource) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userId, ratingSource }),
   });
+  return mapGroup(response);
+}
+
+export async function saveTeamColors(groupId, userId, colors) {
+  if (!validTeamColors(colors)) throw new Error("Choose three different team colors.");
+  const response = await request(`/groups/${encodeURIComponent(groupId)}/team-colors`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, team1Color: colors[0].toUpperCase(), team2Color: colors[1].toUpperCase(), team3Color: colors[2].toUpperCase() }),
+  });
+  const responseColors = [response.team1Color, response.team2Color, response.team3Color].map((value) => value?.toLowerCase());
+  if (!validTeamColors(responseColors)) throw new Error("The server did not return saved team colors. Please try again after the API is updated.");
   return mapGroup(response);
 }
 

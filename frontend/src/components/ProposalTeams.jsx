@@ -3,8 +3,8 @@ import { useApp } from "../state/context";
 import { groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
 
 export default function ProposalTeams({ teams, groupId }) {
-  const { teamColorChoices } = useApp();
-  const colors = groupTeamColors(teamColorChoices, groupId);
+  const { groups } = useApp();
+  const colors = groupTeamColors(groups.find((group) => group.id === String(groupId)));
   const [activeTeam, setActiveTeam] = useState(0);
   const track = useRef(null);
 

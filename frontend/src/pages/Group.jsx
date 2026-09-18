@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useApp } from "../state/context";
 import { rankedDays } from "../state/mock";
-import { loadGroup, loadGroupMembers, loadInviteToken, saveRatingSource } from "../state/groupsApi";
+import { loadGroup, loadGroupMembers, loadInviteToken, saveRatingSource, saveTeamColors } from "../state/groupsApi";
 import { inviteUrl } from "../state/invite";
 import { Avatar, BackLink, EmptyState, GroupImage, Icon, Modal, Section } from "../components/UI";
 import { RatingFields } from "../components/Forms";
 import GroupDateSelector from "../components/GroupDateSelector";
-import { groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
+import { changedTeamColor, groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
 
 const ratingText = (value) => Number.isFinite(value) ? Number(value).toFixed(2) : "—";
 const percentageText = (value) => `${Math.round((Number.isFinite(value) ? value : 0) * 100)}%`;
@@ -16,7 +16,7 @@ const selfRatingText = (value) => Number.isFinite(value) ? value : "—";
 
 export default function Group() {
   const { groupId } = useParams();
-  const { groups, groupsLoading, groupsError, games, user, updateRatings, teamColorChoices, setTeamColor } = useApp();
+  const { groups, groupsLoading, groupsError, games, user, updateRatings, updateGroupDetails } = useApp();
   const group = groups.find((item) => item.id === groupId);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [ratings, setRatings] = useState(null);
@@ -29,6 +29,10 @@ export default function Group() {
   const [detailsRetry, setDetailsRetry] = useState(0);
   const [sourceSaving, setSourceSaving] = useState(false);
   const [sourceError, setSourceError] = useState(null);
+  const [colorSaving, setColorSaving] = useState(false);
+  const [colorError, setColorError] = useState(null);
+  const [colorSaved, setColorSaved] = useState(null);
+  const colorRequest = useRef(false);
   const sourceRequest = useRef(false);
   const detailsKey = `${groupId}:${user.id}:${detailsRetry}`;
   const hasGroup = Boolean(group);
@@ -38,19 +42,43 @@ export default function Group() {
     const controller = new AbortController();
     Promise.all([loadGroup(groupId, controller.signal), loadGroupMembers(groupId, controller.signal)])
       .then(([loadedGroup, members]) => {
-        if (!controller.signal.aborted) setDetails({ key: detailsKey, group: loadedGroup, members });
+        if (!controller.signal.aborted) {
+          setDetails({ key: detailsKey, group: loadedGroup, members });
+          updateGroupDetails(loadedGroup);
+        }
       })
       .catch((error) => {
         if (!controller.signal.aborted) setDetails({ key: detailsKey, error: error.message || "Could not load group details." });
       });
     return () => controller.abort();
-  }, [groupId, user.id, hasGroup, detailsKey]);
+  }, [groupId, user.id, hasGroup, detailsKey, updateGroupDetails]);
 
   const currentDetails = details?.key === detailsKey ? details : null;
   const members = currentDetails?.members;
   const currentMember = members?.find((member) => String(member.userId) === String(user.id));
   const ratingSource = currentDetails?.group?.ratingSource || group?.ratingSource;
-  const teamColors = groupTeamColors(teamColorChoices, groupId);
+  const teamColors = groupTeamColors(currentDetails?.group || group);
+
+  async function changeTeamColor(index, color) {
+    if (!currentMember?.admin || colorRequest.current) return;
+    const next = changedTeamColor(teamColors, index, color);
+    if (!next || next[index] === teamColors[index]) return;
+    colorRequest.current = true;
+    setColorSaving(true);
+    setColorError(null);
+    setColorSaved(null);
+    try {
+      const saved = await saveTeamColors(groupId, user.id, next);
+      setDetails((previous) => previous?.key === detailsKey ? { ...previous, group: saved } : previous);
+      updateGroupDetails(saved);
+      setColorSaved({ key: detailsKey, message: "Team colors saved." });
+    } catch (error) {
+      setColorError({ key: detailsKey, message: error.message || "Could not save team colors. Please try again." });
+    } finally {
+      colorRequest.current = false;
+      setColorSaving(false);
+    }
+  }
 
   async function changeRatingSource(value) {
     if (!currentMember?.admin || sourceRequest.current || value === ratingSource) return;
@@ -160,17 +188,22 @@ export default function Group() {
     </div>
     {settingsOpen && <Modal title="Group settings" onClose={() => setSettingsOpen(false)}>
         <Section title="Team colors">
-          <p className="form-hint">Choose a color for each team. Preview only — choices reset when you refresh.</p>
+          <p className="form-hint">Choose three different colors for this group.</p>
           <div className="team-color-settings">
             {teamColors.map((color, index) => <label key={index}>
               Team {index + 1}
               <span className="color-select-row"><span className="kit-swatch" style={{ "--kit": TEAM_COLOR_OPTIONS[color].kit }} />
-                <select value={color} onChange={(event) => setTeamColor(groupId, index, event.target.value)}>
+                <select value={color} disabled={!currentMember?.admin || colorSaving} onChange={(event) => changeTeamColor(index, event.target.value)}>
                   {Object.entries(TEAM_COLOR_OPTIONS).map(([value, option]) => <option key={value} value={value} disabled={teamColors.includes(value) && color !== value}>{option.label}</option>)}
                 </select>
               </span>
             </label>)}
           </div>
+          {!currentDetails && <p className="form-hint" role="status">Loading team colors...</p>}
+          {members && !currentMember?.admin && <p className="form-hint">Only group admins can change team colors.</p>}
+          {colorSaving && <p className="form-hint" role="status">Saving team colors...</p>}
+          {colorError?.key === detailsKey && <p className="error" role="alert">{colorError.message}</p>}
+          {colorSaved?.key === detailsKey && <p className="success" role="status">{colorSaved.message}</p>}
         </Section>
         <Section title="Team balancing rating">
           <div className="panel rating-source-panel">

@@ -9,13 +9,22 @@ export const TEAM_COLOR_OPTIONS = {
   green: { label: "Green", kit: "#387a55", ink: "#fff" },
 };
 
-export function groupTeamColors(overrides, groupId) {
-  return overrides?.[groupId] || DEFAULT_TEAM_COLORS;
+export function groupTeamColors(group) {
+  return group?.teamColors || DEFAULT_TEAM_COLORS;
 }
 
-export function chooseTeamColor(overrides, groupId, index, color) {
-  const previous = groupTeamColors(overrides, groupId);
-  if (!TEAM_COLOR_OPTIONS[color] || !Number.isInteger(index) || index < 0 || index >= previous.length
-    || (previous.includes(color) && previous[index] !== color)) return overrides;
-  return { ...overrides, [groupId]: previous.map((item, itemIndex) => itemIndex === index ? color : item) };
+export function colorsFromGroupDto(dto) {
+  const colors = [dto.team1Color, dto.team2Color, dto.team3Color].map((value) => value?.toLowerCase());
+  return validTeamColors(colors) ? colors : [...DEFAULT_TEAM_COLORS];
+}
+
+export function validTeamColors(colors) {
+  return Array.isArray(colors) && colors.length === 3 && new Set(colors).size === 3
+    && colors.every((color) => Object.hasOwn(TEAM_COLOR_OPTIONS, color));
+}
+
+export function changedTeamColor(colors, index, color) {
+  if (!Number.isInteger(index) || index < 0 || index >= colors.length) return null;
+  const next = colors.map((current, currentIndex) => currentIndex === index ? color : current);
+  return validTeamColors(next) ? next : null;
 }

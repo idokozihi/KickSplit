@@ -16,6 +16,7 @@ import com.kicksplit.backend.repository.GroupMemberRepository;
 import com.kicksplit.backend.repository.GroupRepository;
 import com.kicksplit.backend.repository.UserRepository;
 import java.util.UUID;
+import com.kicksplit.backend.entity.TeamColor;
 
 @Service
 public class GroupService {
@@ -159,6 +160,46 @@ public class GroupService {
         }
 
         group.setRatingSource(ratingSource);
+
+        return groupRepository.save(group);
+    }
+
+    @Transactional
+    public Group updateTeamColors(
+            Long groupId,
+            Long userId,
+            TeamColor team1Color,
+            TeamColor team2Color,
+            TeamColor team3Color) {
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        GroupMember membership = groupMemberRepository
+                .findByUser_IdAndGroup_Id(userId, groupId)
+                .orElseThrow(() -> new RuntimeException(
+                        "User is not a member of this group"));
+
+        if (!membership.isAdmin()) {
+            throw new RuntimeException(
+                    "Only group admins can change team colors");
+        }
+
+        if (team1Color == null || team2Color == null || team3Color == null) {
+            throw new RuntimeException("All team colors are required");
+        }
+
+        if (team1Color == team2Color
+                || team1Color == team3Color
+                || team2Color == team3Color) {
+
+            throw new RuntimeException(
+                    "Team colors must be different");
+        }
+
+        group.setTeam1Color(team1Color);
+        group.setTeam2Color(team2Color);
+        group.setTeam3Color(team3Color);
 
         return groupRepository.save(group);
     }

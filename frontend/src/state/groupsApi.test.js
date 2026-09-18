@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadGroup, loadGroupMembers, loadGroups, loadInviteToken, saveGroup, saveRatingSource } from "./groupsApi.js";
+import { loadGroup, loadGroupMembers, loadGroups, loadInviteToken, saveGroup, saveRatingSource, saveTeamColors } from "./groupsApi.js";
 
 test("group detail and members load from their endpoints", async (t) => {
   const calls = [];
@@ -9,16 +9,48 @@ test("group detail and members load from their endpoints", async (t) => {
     calls.push({ url, signal: options.signal });
     return { ok: true, json: async () => url.endsWith("/members")
       ? [{ userId: 7, name: "Alex", appRating: 3.5333333333, ratedGames: 1, totalWins: 5, winRate: 1 }]
-      : { id: 42, name: "Friday FC", ratingSource: "SELF_RATING" } };
+      : { id: 42, name: "Friday FC", ratingSource: "SELF_RATING", team1Color: "BLUE", team2Color: "BLACK", team3Color: "WHITE" } };
   });
   const group = await loadGroup(42, signal);
   const members = await loadGroupMembers(42, signal);
   assert.equal(group.ratingSource, "SELF_RATING");
+  assert.deepEqual(group.teamColors, ["blue", "black", "white"]);
   assert.equal(members[0].appRating, 3.5333333333);
   assert.deepEqual(calls, [
     { url: "/api/groups/42", signal },
     { url: "/api/groups/42/members", signal },
   ]);
+});
+
+test("reloading groups restores saved team colors for the team builder", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url) => {
+    assert.equal(url, "/api/groups/user/7");
+    return { ok: true, json: async () => [{ id: 42, name: "Friday FC", team1Color: "GREEN", team2Color: "BLACK", team3Color: "WHITE" }] };
+  });
+  assert.deepEqual((await loadGroups(7))[0].teamColors, ["green", "black", "white"]);
+});
+
+test("admin team color save sends backend enums and uses saved Group response", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/groups/42/team-colors");
+    assert.equal(options.method, "PATCH");
+    assert.equal(options.headers["Content-Type"], "application/json");
+    assert.deepEqual(JSON.parse(options.body), { userId: 7, team1Color: "BLUE", team2Color: "BLACK", team3Color: "WHITE" });
+    return { ok: true, json: async () => ({ id: 42, name: "Friday FC", team1Color: "BLUE", team2Color: "BLACK", team3Color: "WHITE" }) };
+  });
+  assert.deepEqual((await saveTeamColors(42, 7, ["blue", "black", "white"])).teamColors, ["blue", "black", "white"]);
+});
+
+test("team color save rejects duplicates and explains admin failures", async (t) => {
+  const fetchMock = t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 403 }));
+  await assert.rejects(saveTeamColors(42, 7, ["red", "red", "white"]), /three different/);
+  assert.equal(fetchMock.mock.callCount(), 0);
+  await assert.rejects(saveTeamColors(42, 7, ["blue", "black", "white"]), /Only group admins/);
+});
+
+test("team color save does not claim success when response omits persisted colors", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => ({ ok: true, json: async () => ({ id: 42, name: "Friday FC" }) }));
+  await assert.rejects(saveTeamColors(42, 7, ["blue", "black", "white"]), /did not return saved team colors/);
 });
 
 test("admin rating source change uses the logged-in user id and saved response", async (t) => {

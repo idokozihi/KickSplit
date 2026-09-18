@@ -1,19 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { chooseTeamColor, groupTeamColors } from "./teamColors.js";
+import { changedTeamColor, colorsFromGroupDto, groupTeamColors } from "./teamColors.js";
 
-test("team colors default per group and stay separate in frontend state", () => {
-  const initial = {};
-  assert.deepEqual(groupTeamColors(initial, "one"), ["red", "black", "white"]);
-  const changed = chooseTeamColor(initial, "one", 0, "blue");
-  assert.deepEqual(groupTeamColors(changed, "one"), ["blue", "black", "white"]);
-  assert.deepEqual(groupTeamColors(changed, "two"), ["red", "black", "white"]);
-  assert.deepEqual(initial, {});
+test("group DTO colors map to frontend values with defaults for older data", () => {
+  assert.deepEqual(colorsFromGroupDto({ team1Color: "BLUE", team2Color: "BLACK", team3Color: "WHITE" }), ["blue", "black", "white"]);
+  assert.deepEqual(groupTeamColors({ teamColors: ["blue", "black", "white"] }), ["blue", "black", "white"]);
+  assert.deepEqual(groupTeamColors(undefined), ["red", "black", "white"]);
+  assert.deepEqual(colorsFromGroupDto({}), ["red", "black", "white"]);
 });
 
 test("a team cannot reuse another team's color or select an unknown color", () => {
-  const state = chooseTeamColor({}, "one", 0, "blue");
-  assert.equal(chooseTeamColor(state, "one", 1, "blue"), state);
-  assert.equal(chooseTeamColor(state, "one", 1, "purple"), state);
-  assert.equal(chooseTeamColor(state, "one", 3, "green"), state);
+  const colors = ["red", "black", "white"];
+  assert.deepEqual(changedTeamColor(colors, 0, "blue"), ["blue", "black", "white"]);
+  assert.equal(changedTeamColor(colors, 1, "red"), null);
+  assert.equal(changedTeamColor(colors, 1, "purple"), null);
+  assert.equal(changedTeamColor(colors, 3, "green"), null);
 });

@@ -16,7 +16,7 @@ function localDayKey(date = new Date()) {
 }
 
 export default function Games() {
-  const { games, gamesLoading, gamesError, groupsError, teamColorChoices } = useApp();
+  const { games, groups, gamesLoading, gamesError, groupsError } = useApp();
   const [todayKey, setTodayKey] = useState(localDayKey);
   useEffect(() => {
     const now = new Date();
@@ -71,7 +71,7 @@ export default function Games() {
         {gamesLoading ? <EmptyState title="Loading games..." /> : past.length ? <div className="cards-grid">
           {past.map(({ game, day }) => {
             const entry = results[game.id];
-            const teamNames = groupTeamColors(teamColorChoices, game.groupId).map((color) => TEAM_COLOR_OPTIONS[color].label);
+            const teamNames = groupTeamColors(groups.find((group) => group.id === String(game.groupId))).map((color) => TEAM_COLOR_OPTIONS[color].label);
             return <article className="game-card" key={`${game.id}-${day.id}`}>
               <h3><Link to={`/games/${game.id}?day=${day.id}`}><bdi>{game.title}</bdi></Link></h3>
               <p className="muted">{game.groupName} ֲ· {proposedDate(day.date)}</p>

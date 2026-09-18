@@ -10,8 +10,8 @@ import { groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
 const emptyWins = ["0", "0", "0"];
 
 export default function GameResult({ game, user, availabilityKnown = false }) {
-  const { teamColorChoices } = useApp();
-  const teamNames = groupTeamColors(teamColorChoices, game.groupId).map((color) => TEAM_COLOR_OPTIONS[color].label);
+  const { groups } = useApp();
+  const teamNames = groupTeamColors(groups.find((group) => group.id === String(game.groupId))).map((color) => TEAM_COLOR_OPTIONS[color].label);
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState(null);
   const [retry, setRetry] = useState(0);
