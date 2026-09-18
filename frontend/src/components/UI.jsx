@@ -23,6 +23,7 @@ export function Icon({ name = "ball", size = 22, ...props }) {
         <path d="M2 21v-3a7 7 0 0 1 14 0v3m0-16a3 3 0 0 1 0 6m3 3a6 6 0 0 1 3 5v2" />
       </>
     ),
+    chat: <path d="M4 5h16v12H8l-4 3V5Z" />,
     profile: (
       <>
         <circle cx="12" cy="8" r="4" />

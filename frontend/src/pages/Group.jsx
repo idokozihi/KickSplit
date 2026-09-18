@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useApp } from "../state/context";
 import { rankedDays } from "../state/mock";
 import { loadGroup, loadGroupMembers, loadInviteToken, saveRatingSource, saveTeamColors } from "../state/groupsApi";
@@ -139,7 +139,7 @@ export default function Group() {
             : currentDetails?.error ? "Members unavailable" : "Members loading"}</span>
       </div>
     </header>
-    <div className="group-actions"><button className="button secondary" onClick={openInvite}>Invite players</button><button className="button secondary" onClick={() => setSettingsOpen(true)}>⚙ Group settings</button></div>
+    <div className="group-actions"><Link className="button primary" to={`/groups/${groupId}/chat`}><Icon name="chat" size={18} />Chat</Link><button className="button secondary" onClick={openInvite}>Invite players</button><button className="button secondary" onClick={() => setSettingsOpen(true)}>⚙ Group settings</button></div>
     <div className="home-grid">
       <div>
         <Section title="Proposed days">

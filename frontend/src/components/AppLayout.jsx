@@ -26,7 +26,7 @@ function AppLayout() {
         </Link>
       </header>
       <BottomNav />
-      <main id="main" className="main-content" key={pathname}>
+      <main id="main" className={`main-content ${/^\/groups\/[^/]+\/chat$/.test(pathname) ? "chat-main" : ""}`} key={pathname}>
         <Outlet />
       </main>
     </div>

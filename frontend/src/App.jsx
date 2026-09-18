@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Games from "./pages/Games";
 import Groups from "./pages/Groups";
 import Group from "./pages/Group";
+import GroupChat from "./pages/GroupChat";
 import Game from "./pages/Game";
 import TeamProposals from "./pages/TeamProposals";
 import Profile from "./pages/Profile";
@@ -38,6 +39,7 @@ function App() {
         <Route path="/games" element={<Games />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/groups/:groupId" element={<Group />} />
+        <Route path="/groups/:groupId/chat" element={<GroupChat />} />
         <Route path="/games/:gameId" element={<Game />} />
         <Route path="/games/:gameId/proposals" element={<TeamProposals />} />
         <Route path="/profile" element={<Profile />} />
