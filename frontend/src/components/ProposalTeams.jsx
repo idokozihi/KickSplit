@@ -22,9 +22,9 @@ export default function ProposalTeams({ teams, groupId }) {
 
   return <div className="lineup-viewer">
     <div className="team-selector" role="group" aria-label="Teams in this proposal">
-      {teams.map((team, index) => <button type="button" key={index} className={activeTeam === index ? "active" : ""} aria-pressed={activeTeam === index} onClick={() => selectTeam(index)}>
+      {teams.map((team, index) => <button type="button" key={index} className={activeTeam === index ? "active" : ""} style={{ "--kit": TEAM_COLOR_OPTIONS[colors[index]].kit, "--kit-ink": TEAM_COLOR_OPTIONS[colors[index]].ink }} aria-pressed={activeTeam === index} onClick={() => selectTeam(index)}>
         <span className="kit-swatch" style={{ "--kit": TEAM_COLOR_OPTIONS[colors[index]].kit }} />
-        {TEAM_COLOR_OPTIONS[colors[index]].label}<small>{team.length}</small>
+        Team {index + 1} ({TEAM_COLOR_OPTIONS[colors[index]].label})<small>{team.length}</small>
       </button>)}
     </div>
     <div className="pitch-carousel" ref={track} onScroll={updateActiveTeam} aria-label="Swipe between team lineups">

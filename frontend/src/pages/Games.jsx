@@ -7,6 +7,7 @@ import { groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
 import {
   EmptyState,
   GameCard,
+  Icon,
   PageHeading,
   Section,
 } from "../components/UI";
@@ -26,6 +27,7 @@ export default function Games() {
   }, [todayKey]);
   const isPast = (date) => date.slice(0, 10) < todayKey;
   const scheduled = rankedDaysByGroup(games).filter(({ day }) => !isPast(day.date));
+  const upcomingMonths = [...new Set(scheduled.map(({ day }) => day.date.slice(0, 7)))].sort();
   const past = games.flatMap((game) => gameDays(game).filter((day) => isPast(day.date)).map((day) => ({ game, day })))
     .sort((a, b) => b.day.date.localeCompare(a.day.date));
   const [results, setResults] = useState({});
@@ -44,21 +46,22 @@ export default function Games() {
   }, [pastIds, pastOpen, retry]);
   return (
     <div className="games-screen">
-      <PageHeading title="Your games" subtitle="Your upcoming kickoffs and results" />
+      <PageHeading title="Games" action={<Link className="button primary games-new-action" to="/groups" aria-label="Choose a group to create a game"><Icon name="plus" size={16} />New game</Link>} />
       <div className="games-section-switch" aria-label="Game sections">
-        <span className="active">Proposed days <b>{scheduled.length}</b></span>
-        <button type="button" onClick={() => setPastOpen((value) => !value)} aria-expanded={pastOpen}>Past games <b>{past.length}</b></button>
+        <button type="button" className={!pastOpen ? "active" : ""} aria-pressed={!pastOpen} onClick={() => setPastOpen(false)}>Upcoming</button>
+        <button type="button" className={pastOpen ? "active" : ""} aria-pressed={pastOpen} onClick={() => setPastOpen(true)}>Past</button>
       </div>
+      {!pastOpen && <>
       <Section
-        title={`Proposed days${scheduled.length ? ` ֲ· ${scheduled.length}` : ""}`}
+        title="Proposed days"
       >
         {(gamesError || groupsError) && <p className="error" role="alert">{gamesError || groupsError}</p>}
         {gamesLoading ? <EmptyState title="Loading games..." /> : scheduled.length ? (
-          <div className="game-row-list">
-            {scheduled.map(({ game, day, popular }) => (
-              <GameCard game={game} day={day} popular={popular} loadGuestList={game.backendBacked} key={`${game.id}-${day.id}`} />
-            ))}
-          </div>
+          upcomingMonths.map((month) => <div className="games-month" key={month}>
+            <h3>{new Date(`${month}-01T00:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</h3>
+            <div className="game-row-list">{scheduled.filter(({ day }) => day.date.startsWith(month)).sort((a, b) => a.day.date.localeCompare(b.day.date)).map(({ game, day, popular }) =>
+              <GameCard game={game} day={day} popular={popular} loadGuestList={game.backendBacked} key={`${game.id}-${day.id}`} />)}</div>
+          </div>)
         ) : !gamesError && !groupsError && (
           <EmptyState
             title="An open calendar, for now"
@@ -68,9 +71,12 @@ export default function Games() {
           />
         )}
       </Section>
+      <div className="games-photo-banner"><strong>Good players.<br />Great people.</strong></div>
+      </>}
       <section className="section past-games-section">
       {pastOpen && <>
-        <h2>Past games</h2>
+        <h2>Past games · {past.length}</h2>
+        {(gamesError || groupsError) && <p className="error" role="alert">{gamesError || groupsError}</p>}
         {gamesLoading ? <EmptyState title="Loading games..." /> : past.length ? <div className="game-row-list">
           {past.map(({ game, day }) => {
             const entry = results[game.id];

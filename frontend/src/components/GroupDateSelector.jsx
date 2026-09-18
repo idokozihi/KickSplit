@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { proposedDate } from "../state/mock";
+import { participantCount, proposedDate } from "../state/mock";
 import { CreateGameForm } from "./Forms";
 
 function localDateKey(date) {
@@ -32,10 +32,11 @@ export default function GroupDateSelector({ groupId, scheduled }) {
     <div className="date-strip" aria-label="Next 14 days">
       {dates.map(({ key, date }) => {
         const entries = byDate.get(key) || [];
-        const tile = <><span>{date.toLocaleDateString("en-GB", { weekday: "short" })}</span><strong>{date.getDate()}</strong><small>{date.toLocaleDateString("en-GB", { month: "short" })}</small>{entries.length > 0 && <i aria-label="Game proposed" />}{entries.some((entry) => entry === scheduled[0]) && <em>Popular</em>}</>;
+        const popular = entries.some((entry) => entry === scheduled[0]);
+        const tile = <><span>{date.toLocaleDateString("en-GB", { weekday: "short" })}</span><strong>{date.getDate()}</strong><span className="date-tile-status">{entries.length ? <><i aria-label="Game proposed">✓</i>{(!entries[0].game.backendBacked || entries[0].game.registrationsFor) && <small>{participantCount(entries[0].day)}/{entries[0].game.target}</small>}</> : <i className="empty" aria-hidden="true" />}</span></>;
         return entries.length === 1
-          ? <Link className="date-tile has-game" key={key} to={`/games/${entries[0].game.id}?day=${entries[0].day.id}`} aria-label={`${proposedDate(key)}, game proposed`}>{tile}</Link>
-          : <button className={`date-tile ${entries.length ? "has-game" : ""}`} key={key} onClick={() => entries.length ? setSelectedDate(key) : setCreating(key)} aria-label={`${proposedDate(key)}${entries.length ? `, ${entries.length} games` : ", create game"}`}>{tile}</button>;
+          ? <Link className={`date-tile has-game ${popular ? "popular" : ""}`} key={key} to={`/games/${entries[0].game.id}?day=${entries[0].day.id}`} aria-label={`${proposedDate(key)}, game proposed`}>{tile}</Link>
+          : <button className={`date-tile ${entries.length ? "has-game" : ""} ${popular ? "popular" : ""}`} key={key} onClick={() => entries.length ? setSelectedDate(key) : setCreating(key)} aria-label={`${proposedDate(key)}${entries.length ? `, ${entries.length} games` : ", create game"}`}>{tile}</button>;
       })}
       <button className="date-tile more-date-tile" onClick={() => setMoreDates((value) => !value)}>Calendar<br />More dates</button>
     </div>

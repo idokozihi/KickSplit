@@ -41,15 +41,15 @@ export default function Home() {
       <div className="home-date-strip" aria-label="Games in the next 14 days">
         {fourteenDays.map(({ date, key }) => {
           const entry = byDate.find(({ day }) => day.date.slice(0, 10) === key);
-          const content = <><small>{date.toLocaleDateString("en-GB", { weekday: "short" })}</small><strong>{date.getDate()}</strong><span>{date.toLocaleDateString("en-GB", { month: "short" })}</span>{entry && <i aria-label="Game proposed" />}</>;
-          return entry ? <Link key={key} className="home-date has-game" to={`/games/${entry.game.id}?day=${entry.day.id}`} aria-label={`Game on ${date.toLocaleDateString("en-GB", { day: "numeric", month: "long" })}`}>{content}</Link>
+          const content = <><small>{date.toLocaleDateString("en-GB", { weekday: "short" })}</small><strong>{date.getDate()}</strong><span className="home-date-status"><i className={entry ? "has-game" : ""}>{entry ? "✓" : "·"}</i>{entry && (!entry.game.backendBacked || entry.game.registrationsFor) && <small>{participantCount(entry.day)}/{entry.game.target}</small>}</span></>;
+          return entry ? <Link key={key} className={`home-date has-game ${entry.day === popular?.day ? "popular" : ""}`} to={`/games/${entry.game.id}?day=${entry.day.id}`} aria-label={`Game on ${date.toLocaleDateString("en-GB", { day: "numeric", month: "long" })}`}>{content}</Link>
             : <span key={key} className="home-date">{content}</span>;
         })}
       </div>
     </Section>
     {popular && <Link className="popular-game-row home-popular-row" to={`/games/${popular.game.id}?day=${popular.day.id}`}>
-      <span className="popular-game-icon"><Icon name="ball" size={19} /></span>
-      <span><small>Most popular day</small><strong>{proposedDate(popular.day.date)}</strong><small>{participantCount(popular.day)} available · <bdi>{popular.game.title}</bdi></small></span>
+      <span className="popular-game-icon"><Icon name="games" size={19} /></span>
+      <span><small className="popular-label"><Icon name="crown" size={14} />Most popular day</small><strong>{proposedDate(popular.day.date)}</strong><small>{(!popular.game.backendBacked || popular.game.registrationsFor) && `${participantCount(popular.day)} available · `}<bdi>{popular.game.title}</bdi></small></span>
       <Icon name="arrow" size={17} />
     </Link>}
     {waiting.length > 0 && <Section title="Waiting on your response" link={{ to: "/games", label: "View all" }}>

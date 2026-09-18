@@ -126,10 +126,12 @@ export default function Group() {
   if (!group && groupsError) return <EmptyState title="Could not load group" description={groupsError} to="/groups" action="Your groups" />;
   if (!group) return <EmptyState title="Group not found" description="This group could not be found on the server." to="/groups" action="Your groups" />;
 
-  const scheduled = rankedDays(games.filter((game) => game.groupId === groupId));
+  const now = new Date();
+  const todayKey = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+  const scheduled = rankedDays(games.filter((game) => game.groupId === groupId)).filter(({ day }) => day.date.slice(0, 10) >= todayKey);
   return <div className="group-screen">
-    <BackLink to="/groups">Your groups</BackLink>
     <header className="group-hero">
+      <BackLink to="/groups">Groups</BackLink>
       <div className="group-hero-identity">
         <GroupImage group={group} large />
         <h1><bdi>{group.name}</bdi></h1>
@@ -150,11 +152,11 @@ export default function Group() {
           <GroupDateSelector groupId={groupId} scheduled={scheduled} />
           {scheduled[0] && <Link className="popular-game-row" to={`/games/${scheduled[0].game.id}?day=${scheduled[0].day.id}`}>
             <span className="popular-game-icon"><Icon name="games" size={20} /></span>
-            <span><small>Most popular day</small><strong>{proposedDate(scheduled[0].day.date)}</strong><small>{participantCount(scheduled[0].day)} participants · {scheduled[0].game.title}</small></span>
+            <span><small>Most popular day</small><strong>{proposedDate(scheduled[0].day.date)}</strong><small>{(!scheduled[0].game.backendBacked || scheduled[0].game.registrationsFor) && `${participantCount(scheduled[0].day)} participants · `}{scheduled[0].game.title}</small></span>
             <Icon name="arrow" size={18} />
           </Link>}
         </Section>
-        <details className="collapsible-section"><summary>Members {members ? `· ${members.length}` : ""}<span>⌄</span></summary>
+        <details className="collapsible-section group-summary"><summary><span className="summary-copy"><Icon name="groups" size={18} /><strong>Members {members ? `(${members.length})` : ""}</strong></span><span className="summary-avatars">{members?.slice(0, 4).map((member) => <Avatar key={member.userId} name={member.name} photo={String(member.userId) === String(user.id) ? user.photo : member.imageUrl} />)}{members?.length > 4 && <small>+{members.length - 4}</small>}</span><span className="summary-chevron">›</span></summary>
           {!currentDetails && <p className="muted" role="status">Loading members...</p>}
           {currentDetails?.error && <><p className="error" role="alert">{currentDetails.error}</p>
             <button className="button secondary" onClick={() => setDetailsRetry((value) => value + 1)}>Retry</button></>}
@@ -172,7 +174,7 @@ export default function Group() {
         </details>
       </div>
       <aside>
-        <details className="collapsible-section"><summary>Your player profile<span>⌄</span></summary>
+        <details className="collapsible-section group-summary"><summary><span className="summary-copy"><Icon name="profile" size={18} /><span><strong>Player Profile</strong><small>View and edit your profile</small></span></span><span className="summary-chevron">›</span></summary>
           <div className="panel">
             <div className="person"><Avatar name={user.name} photo={user.photo} /><div><h3>{user.name}</h3><small><bdi>{group.name}</bdi></small></div></div>
             {currentMember ? <>

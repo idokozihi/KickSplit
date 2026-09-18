@@ -40,46 +40,17 @@ export default function Login() {
     }
   }
   return (
-    <div className="auth-shell">
+    <div className="auth-shell reference-auth">
       <section className="auth-story">
-        <Brand />
         <div className="auth-story-copy">
-          <p className="eyebrow">YOUR CREW. YOUR GAME.</p>
-          <h1>
-            Good games
-            <br />
-            start <em>here.</em>
-          </h1>
-          <p>
-            Bring your football group together.
-            <br />
-            Get the numbers. Split the teams. Play.
-          </p>
-          <div className="auth-pitch" aria-hidden="true">
-            <div className="pitch">
-              <span />
-              <i />
-            </div>
-            {["01", "07", "10", "05", "09"].map((number, i) => (
-              <span key={number} className={`shirt shirt-${i}`}>
-                {number}
-              </span>
-            ))}
-          </div>
+          <Brand />
+          <p>Organise football. Bring people together.</p>
         </div>
-        <p className="auth-caption">THE WEEKLY GAME, SORTED.</p>
       </section>
       <section className="auth-form-panel">
         <div className="auth-form-inner">
-          <p className="eyebrow">WELCOME TO KICKSPLIT</p>
-          <h2>
-            {signup ? "Find your football people." : "Back for another game?"}
-          </h2>
-          <p className="muted">
-            {signup
-              ? "Create an account and get your crew together."
-              : "Your next kickoff is just around the corner."}
-          </p>
+          <h1>{signup ? "Join your crew" : "Welcome back"}</h1>
+          <p className="auth-supporting">{signup ? "Create your KickSplit account." : "Sign in to get back to the game."}</p>
           <div className="segmented" aria-label="Account action">
             <button
               type="button"
@@ -157,7 +128,7 @@ export default function Login() {
               </p>
             )}
             <button className="button primary" disabled={submitting}>
-              {signup ? "Create account" : "Let’s play"}
+              {signup ? "Create account" : "Continue with email"}
               <Icon name="arrow" size={19} />
             </button>
           </form>

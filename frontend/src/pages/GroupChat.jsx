@@ -107,7 +107,7 @@ export default function GroupChat() {
     {error && <div className="chat-error" role="alert">{error} <button type="button" onClick={() => refresh()}>Retry</button></div>}
     <form className="chat-composer" onSubmit={send}>
       <input aria-label="Message" placeholder="Message your group" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={5000} />
-      <button className="button primary" type="submit" disabled={sending || !draft.trim()}>{sending ? "Sending..." : "Send"}</button>
+      <button className="chat-send" type="submit" aria-label={sending ? "Sending message" : "Send message"} disabled={sending || !draft.trim()}><Icon name="arrow" size={18} /></button>
     </form>
   </section>;
 }

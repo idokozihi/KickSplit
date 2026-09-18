@@ -1,53 +1,40 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useApp } from "../state/context";
-import { Avatar, Icon, Modal, PageHeading } from "../components/UI";
+import { gameDays } from "../state/mock";
+import { Avatar, Icon, Modal } from "../components/UI";
 import { ProfileForm } from "../components/Forms";
 
 export default function Profile() {
-  const { user, updateUser } = useApp();
+  const { user, groups, games, updateUser } = useApp();
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const now = new Date();
+  const todayKey = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+  const upcoming = games.filter((game) => gameDays(game).some((day) => day.date.slice(0, 10) >= todayKey)).length;
   return (
     <div className="profile-screen">
-      <PageHeading
-        title="Your profile"
-      />
+      <header className="profile-topbar"><h1>Profile</h1></header>
       <div className="profile-layout">
-        <header className="profile-hero">
+        <header className="profile-identity">
           <Avatar name={user.name} photo={user.photo} large />
-          <div><span className="profile-hero-label">PLAYER PROFILE</span><h2>{user.name}</h2><p>@{user.username || "player"}</p></div>
+          <h2>{user.name}</h2>
+          <p>@{user.username || "player"}</p>
         </header>
-        <section className="profile-information" aria-label="Your information">
-          <div className="section-heading"><h2>Your information</h2><Icon name="profile" size={18} /></div>
-          <dl className="profile-details">
-            <div>
-              <dt>Full name</dt>
-              <dd>{user.name}</dd>
-            </div>
-            <div>
-              <dt>Username</dt>
-              <dd>@{user.username || "player"}</dd>
-            </div>
-            <div>
-              <dt>Email</dt>
-              <dd>{user.email}</dd>
-            </div>
-          </dl>
-          <button
-            className="button primary profile-edit"
-            onClick={() => {
-              setEditing(true);
-              setSaved(false);
-            }}
-          >
-            Edit profile
-          </button>
-          {saved && (
-            <p className="success" role="status">
-              Profile updated.
-            </p>
-          )}
-        </section>
+        <div className="profile-stat-tiles" aria-label="Your activity">
+          <div><strong>{groups.length}</strong><span>Groups</span></div>
+          <div><strong>{games.length}</strong><span>Games</span></div>
+          <div><strong>{upcoming}</strong><span>Upcoming</span></div>
+          <div><strong>{games.length - upcoming}</strong><span>Past</span></div>
+        </div>
+        <nav className="profile-menu" aria-label="Profile options">
+          <button onClick={() => { setEditing(true); setSaved(false); }}><Icon name="profile" size={17} /><span>Edit profile</span><span aria-hidden="true">›</span></button>
+          <Link to="/groups"><Icon name="groups" size={17} /><span>My groups</span><small>{groups.length}</small><span aria-hidden="true">›</span></Link>
+          <Link to="/games"><Icon name="games" size={17} /><span>Games &amp; history</span><span aria-hidden="true">›</span></Link>
+          <Link to="/chat"><Icon name="chat" size={17} /><span>Group chats</span><span aria-hidden="true">›</span></Link>
+        </nav>
+        <p className="profile-email">{user.email}</p>
+        {saved && <p className="success" role="status">Profile updated.</p>}
       </div>
       {editing && (
         <Modal title="Edit your profile" onClose={() => setEditing(false)}>

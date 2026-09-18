@@ -21,11 +21,8 @@ export default function Groups() {
   }, [groupIds]);
   return (
     <div className="groups-screen">
-      <PageHeading title="Your groups" subtitle="Your football crews" />
-      <div className="group-list-actions">
-        <button className="button primary" onClick={() => setFlow("create")}><Icon name="plus" size={16} />Create group</button>
-        <button className="button secondary" onClick={() => setFlow("join")}>Join group</button>
-      </div>
+      <PageHeading title="My Groups" action={<button className="button primary groups-create" onClick={() => setFlow("create")}><Icon name="plus" size={16} />Create</button>} />
+      <div className="group-list-actions"><button className="text-link" onClick={() => setFlow("join")}>Have an invite? Join group <Icon name="arrow" size={14} /></button></div>
       {groupsError && <p className="error" role="alert">{groupsError}</p>}
       {groupsLoading ? <EmptyState title="Loading groups..." /> : groups.length ? (
         <div className="group-row-list">
@@ -39,13 +36,13 @@ export default function Groups() {
           description="Create a group for your friends, or join an existing crew with an invite code."
         />
       )}
-      <div className="info-strip">
+      {!groups.length && <div className="info-strip">
         <Icon name="groups" />
         <p>
           Different crew, different game. Your player ratings are set separately
           in each group.
         </p>
-      </div>
+      </div>}
       {flow && <GroupFlow mode={flow} onClose={() => setFlow(null)} />}
     </div>
   );
