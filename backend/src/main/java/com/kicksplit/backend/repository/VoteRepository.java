@@ -12,4 +12,6 @@ public interface VoteRepository extends JpaRepository<Vote, Long> {
     Optional<Vote> findByUser_IdAndGame_Id(Long userId, Long gameId);
 
     List<Vote> findByGame_Id(Long gameId);
+
+    void deleteByGame_Id(Long gameId);
 }
