@@ -126,25 +126,6 @@ export default function TeamProposals({ embedded = false, onRegenerated }) {
       <div className="proposal-selector" role="group" aria-label="Team proposals">
         {proposals.map((proposal, index) => <button key={proposal.id ?? index} aria-pressed={selectedProposal === index} className={selectedProposal === index ? "active" : ""} onClick={() => setSelectedProposal(index)}>Proposal {proposal.proposalNumber ?? index + 1}</button>)}
       </div>
-      {backendBacked && <section className="regeneration-panel" aria-label="New teams">
-        <div>
-          <h2>New teams</h2>
-          {!currentRegeneration && <p role="status">Loading new teams votes...</p>}
-          {currentRegeneration?.error && <p role="alert">{currentRegeneration.error} <button className="button secondary" onClick={() => setRegenerationRetry((value) => value + 1)}>Retry</button></p>}
-          {currentRegeneration?.status && <>
-            <p aria-live="polite">{currentRegeneration.status.voteCount} of {currentRegeneration.status.requiredVotes} {currentRegeneration.status.requiredVotes === 1 ? "player wants" : "players want"} new teams</p>
-            {currentRegeneration.status.blockedByResult && <p>Teams cannot be regenerated after a result has been recorded.</p>}
-            {!currentRegeneration.status.blockedByResult && currentRegeneration.status.currentUserVoted && <p className="regeneration-voted">✓ You voted for new teams</p>}
-            {!currentRegeneration.status.blockedByResult && !currentRegeneration.status.eligible && <p>Only registered, available players can request new teams.</p>}
-            {currentRegeneration.success && <p role="status" className="regeneration-success">New team proposals generated.</p>}
-            {currentRegeneration.saveError && <p role="alert">{currentRegeneration.saveError}</p>}
-          </>}
-        </div>
-        {currentRegeneration?.status?.eligible && !currentRegeneration.status.currentUserVoted && !currentRegeneration.status.blockedByResult &&
-          <button className="button secondary" disabled={currentRegeneration.saving || voting.saving} onClick={voteForNewTeams}>
-            {currentRegeneration.saving ? "Requesting..." : "Request new teams"}
-          </button>}
-      </section>}
       {backendBacked && <div aria-live="polite">
         {voting.loading && <p>Loading votes...</p>}
         {voting.error && <p role="alert">{voting.error} <button className="button secondary" onClick={voting.retry}>Retry votes</button></p>}
@@ -174,7 +155,7 @@ export default function TeamProposals({ embedded = false, onRegenerated }) {
               </div>
               <span className="badge neutral">3 teams</span>
             </header>
-            <ProposalTeams teams={teams} user={user} />
+            <ProposalTeams teams={teams} groupId={game.groupId} />
             {backendBacked && <div className="section-heading proposal-vote-bar">
               <span aria-live="polite">{voting.votes ? `${count} ${count === 1 ? "player chose" : "players chose"} this lineup` : "Votes unavailable"}</span>
               <button className={`button ${selected ? "secondary" : "primary"}`}
@@ -188,6 +169,25 @@ export default function TeamProposals({ embedded = false, onRegenerated }) {
           </section>
         ); })}
       </div>
+      {backendBacked && <section className="regeneration-panel" aria-label="New teams">
+        <div>
+          <h2>New teams</h2>
+          {!currentRegeneration && <p role="status">Loading new teams votes...</p>}
+          {currentRegeneration?.error && <p role="alert">{currentRegeneration.error} <button className="button secondary" onClick={() => setRegenerationRetry((value) => value + 1)}>Retry</button></p>}
+          {currentRegeneration?.status && <>
+            <p aria-live="polite">{currentRegeneration.status.voteCount} of {currentRegeneration.status.requiredVotes} {currentRegeneration.status.requiredVotes === 1 ? "player wants" : "players want"} new teams</p>
+            {currentRegeneration.status.blockedByResult && <p>Teams cannot be regenerated after a result has been recorded.</p>}
+            {!currentRegeneration.status.blockedByResult && currentRegeneration.status.currentUserVoted && <p className="regeneration-voted">✓ You voted for new teams</p>}
+            {!currentRegeneration.status.blockedByResult && !currentRegeneration.status.eligible && <p>Only registered, available players can request new teams.</p>}
+            {currentRegeneration.success && <p role="status" className="regeneration-success">New team proposals generated.</p>}
+            {currentRegeneration.saveError && <p role="alert">{currentRegeneration.saveError}</p>}
+          </>}
+        </div>
+        {currentRegeneration?.status?.eligible && !currentRegeneration.status.currentUserVoted && !currentRegeneration.status.blockedByResult &&
+          <button className="button secondary" disabled={currentRegeneration.saving || voting.saving} onClick={voteForNewTeams}>
+            {currentRegeneration.saving ? "Requesting..." : "Request new teams"}
+          </button>}
+      </section>}
       {!embedded && <p className="form-hint">{backendBacked ? "Teams balanced using player ratings." : "Demo preview · Example lineups only."}</p>}
     </>
   );

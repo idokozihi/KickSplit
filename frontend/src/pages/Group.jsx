@@ -7,6 +7,7 @@ import { inviteUrl } from "../state/invite";
 import { Avatar, BackLink, EmptyState, GroupImage, Icon, Modal, Section } from "../components/UI";
 import { RatingFields } from "../components/Forms";
 import GroupDateSelector from "../components/GroupDateSelector";
+import { groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
 
 const ratingText = (value) => Number.isFinite(value) ? Number(value).toFixed(2) : "—";
 const percentageText = (value) => `${Math.round((Number.isFinite(value) ? value : 0) * 100)}%`;
@@ -15,7 +16,7 @@ const selfRatingText = (value) => Number.isFinite(value) ? value : "—";
 
 export default function Group() {
   const { groupId } = useParams();
-  const { groups, groupsLoading, groupsError, games, user, updateRatings } = useApp();
+  const { groups, groupsLoading, groupsError, games, user, updateRatings, teamColorChoices, setTeamColor } = useApp();
   const group = groups.find((item) => item.id === groupId);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [ratings, setRatings] = useState(null);
@@ -49,6 +50,7 @@ export default function Group() {
   const members = currentDetails?.members;
   const currentMember = members?.find((member) => String(member.userId) === String(user.id));
   const ratingSource = currentDetails?.group?.ratingSource || group?.ratingSource;
+  const teamColors = groupTeamColors(teamColorChoices, groupId);
 
   async function changeRatingSource(value) {
     if (!currentMember?.admin || sourceRequest.current || value === ratingSource) return;
@@ -157,6 +159,19 @@ export default function Group() {
       </aside>
     </div>
     {settingsOpen && <Modal title="Group settings" onClose={() => setSettingsOpen(false)}>
+        <Section title="Team colors">
+          <p className="form-hint">Choose a color for each team. Preview only — choices reset when you refresh.</p>
+          <div className="team-color-settings">
+            {teamColors.map((color, index) => <label key={index}>
+              Team {index + 1}
+              <span className="color-select-row"><span className="kit-swatch" style={{ "--kit": TEAM_COLOR_OPTIONS[color].kit }} />
+                <select value={color} onChange={(event) => setTeamColor(groupId, index, event.target.value)}>
+                  {Object.entries(TEAM_COLOR_OPTIONS).map(([value, option]) => <option key={value} value={value} disabled={teamColors.includes(value) && color !== value}>{option.label}</option>)}
+                </select>
+              </span>
+            </label>)}
+          </div>
+        </Section>
         <Section title="Team balancing rating">
           <div className="panel rating-source-panel">
             <p className="muted">Choose which rating balances team proposals.</p>

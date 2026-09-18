@@ -4,10 +4,14 @@ import { loadGameResult, saveGameResult } from "../state/gameResultsApi";
 import { loadTeamProposals, matchProposalPlayers } from "../state/teamProposalsApi";
 import { goingPlayers } from "../state/mock";
 import ProposalTeams from "./ProposalTeams";
+import { useApp } from "../state/context";
+import { groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
 
 const emptyWins = ["0", "0", "0"];
 
 export default function GameResult({ game, user, availabilityKnown = false }) {
+  const { teamColorChoices } = useApp();
+  const teamNames = groupTeamColors(teamColorChoices, game.groupId).map((color) => TEAM_COLOR_OPTIONS[color].label);
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState(null);
   const [retry, setRetry] = useState(0);
@@ -77,7 +81,7 @@ export default function GameResult({ game, user, availabilityKnown = false }) {
       <span className="result-chevron" aria-hidden="true">{expanded ? "−" : "+"}</span>
     </button>
     {expanded && <div className="result-body">
-    {state.result ? <p role="status"><strong>Saved result:</strong> Proposal {proposals.find((proposal) => String(proposal.id) === String(state.result.proposalId))?.proposalNumber ?? ""} · Red {state.result.team1Wins} · Black {state.result.team2Wins} · White {state.result.team3Wins} wins</p>
+    {state.result ? <p role="status"><strong>Saved result:</strong> Proposal {proposals.find((proposal) => String(proposal.id) === String(state.result.proposalId))?.proposalNumber ?? ""} · {teamNames[0]} {state.result.team1Wins} · {teamNames[1]} {state.result.team2Wins} · {teamNames[2]} {state.result.team3Wins} wins</p>
       : <p className="muted">Result not entered</p>}
     <form className="form" onSubmit={submit}>
       <p>Choose the lineup that was played:</p>
@@ -90,11 +94,11 @@ export default function GameResult({ game, user, availabilityKnown = false }) {
             <span className="proposal-number">{String(selected.proposalNumber).padStart(2, "0")}</span>
             <h3>Proposal {selected.proposalNumber}</h3>
           </header>
-          <ProposalTeams teams={selected.teams} user={user} />
+          <ProposalTeams teams={selected.teams} groupId={game.groupId} />
         </section>}
       </div>
       <div className="result-wins">
-        {wins.map((value, index) => <label key={index}>{["Red", "Black", "White"][index]} team wins
+        {wins.map((value, index) => <label key={index}>{teamNames[index]} team wins
           <input type="number" min="0" step="1" required value={value}
             onChange={(event) => setWins((current) => current.map((item, i) => i === index ? event.target.value : item))} />
         </label>)}

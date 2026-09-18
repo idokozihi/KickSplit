@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { loadGameResult } from "../state/gameResultsApi";
 import { gameDays, proposedDate, rankedDaysByGroup } from "../state/mock";
+import { groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
 import {
   EmptyState,
   GameCard,
@@ -15,7 +16,7 @@ function localDayKey(date = new Date()) {
 }
 
 export default function Games() {
-  const { games, gamesLoading, gamesError, groupsError } = useApp();
+  const { games, gamesLoading, gamesError, groupsError, teamColorChoices } = useApp();
   const [todayKey, setTodayKey] = useState(localDayKey);
   useEffect(() => {
     const now = new Date();
@@ -70,12 +71,13 @@ export default function Games() {
         {gamesLoading ? <EmptyState title="Loading games..." /> : past.length ? <div className="cards-grid">
           {past.map(({ game, day }) => {
             const entry = results[game.id];
+            const teamNames = groupTeamColors(teamColorChoices, game.groupId).map((color) => TEAM_COLOR_OPTIONS[color].label);
             return <article className="game-card" key={`${game.id}-${day.id}`}>
               <h3><Link to={`/games/${game.id}?day=${day.id}`}><bdi>{game.title}</bdi></Link></h3>
               <p className="muted">{game.groupName} ֲ· {proposedDate(day.date)}</p>
               {entry?.error ? <><p className="error" role="alert">{entry.error}</p><button className="button secondary" onClick={() => setRetry((value) => value + 1)}>Retry</button></>
                 : <p>{game.backendBacked && !entry ? "Loading result..." : entry?.result
-                  ? `Red ${entry.result.team1Wins} ֲ· Black ${entry.result.team2Wins} ֲ· White ${entry.result.team3Wins} wins`
+                  ? `${teamNames[0]} ${entry.result.team1Wins} ֲ· ${teamNames[1]} ${entry.result.team2Wins} ֲ· ${teamNames[2]} ${entry.result.team3Wins} wins`
                   : "Result not entered"}</p>}
               <Link className="text-link" to={`/games/${game.id}?day=${day.id}`}>View game</Link>
             </article>;
