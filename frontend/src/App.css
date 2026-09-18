@@ -954,6 +954,27 @@ svg {
   color: #738568;
   font-size: 14px;
 }
+.regeneration-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 24px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f7faf2;
+}
+.regeneration-panel h2 { font-size: 16px; margin-bottom: 5px; }
+.regeneration-panel > div { min-width: 0; overflow-wrap: anywhere; }
+.regeneration-panel p { font-size: 13px; color: #66785b; line-height: 1.5; }
+.regeneration-panel .button { flex-shrink: 0; }
+.regeneration-panel .regeneration-voted,
+.regeneration-panel .regeneration-success { color: #397146; font-weight: 700; }
+@media (max-width: 600px) {
+  .regeneration-panel { align-items: stretch; flex-direction: column; }
+  .regeneration-panel .button { width: 100%; }
+}
 .proposals {
   display: grid;
   gap: 25px;

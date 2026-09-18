@@ -1,7 +1,7 @@
 import { useParams, useSearchParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loadGame } from "../state/gamesApi";
-import { loadTeamProposals, matchProposalPlayers } from "../state/teamProposalsApi";
+import { loadTeamProposals, loadRegenerationVote, matchProposalPlayers, requestNewTeams } from "../state/teamProposalsApi";
 import { useApp } from "../state/context";
 import { useVotes } from "../state/useVotes";
 import { proposalVoteState } from "../state/votesApi";
@@ -16,10 +16,53 @@ export default function TeamProposals() {
   const source = games.find((item) => item.id === gameId);
   const [result, setResult] = useState(null);
   const [retry, setRetry] = useState(0);
+  const [regeneration, setRegeneration] = useState(null);
+  const [regenerationRetry, setRegenerationRetry] = useState(0);
+  const regenerationSaving = useRef(false);
+  const regenerationRequest = useRef(null);
   const backendBacked = source?.backendBacked;
   const voting = useVotes(gameId, user, backendBacked);
   const hasGame = Boolean(source);
   const requestKey = `${gameId}:${retry}`;
+  const regenerationKey = `${gameId}:${voting.userId}:${regenerationRetry}`;
+  useEffect(() => () => {
+    regenerationRequest.current?.abort();
+    regenerationRequest.current = null;
+    regenerationSaving.current = false;
+  }, [regenerationKey]);
+  useEffect(() => {
+    if (!backendBacked || voting.userId == null) return;
+    const controller = new AbortController();
+    loadRegenerationVote(gameId, voting.userId, controller.signal)
+      .then((status) => { if (!controller.signal.aborted) setRegeneration({ key: regenerationKey, status }); })
+      .catch((error) => { if (!controller.signal.aborted) setRegeneration({ key: regenerationKey, error: error.message }); });
+    return () => controller.abort();
+  }, [backendBacked, gameId, voting.userId, regenerationKey]);
+  const currentRegeneration = regeneration?.key === regenerationKey ? regeneration : null;
+  async function voteForNewTeams() {
+    if (regenerationSaving.current || voting.saving || !currentRegeneration?.status?.eligible
+      || currentRegeneration.status.currentUserVoted || currentRegeneration.status.blockedByResult) return;
+    regenerationSaving.current = true;
+    const controller = new AbortController();
+    regenerationRequest.current = controller;
+    setRegeneration((previous) => ({ ...previous, saving: true, saveError: null }));
+    try {
+      const status = await requestNewTeams(gameId, voting.userId, controller.signal);
+      if (controller.signal.aborted) return;
+      if (status.regenerated) {
+        setResult((previous) => previous?.key === requestKey ? { ...previous, proposals: status.proposals } : previous);
+        voting.resetVotes();
+      }
+      setRegeneration({ key: regenerationKey, status, success: status.regenerated });
+    } catch (error) {
+      if (!controller.signal.aborted) setRegeneration((previous) => ({ ...previous, saving: false, saveError: error.message }));
+    } finally {
+      if (regenerationRequest.current === controller) {
+        regenerationRequest.current = null;
+        regenerationSaving.current = false;
+      }
+    }
+  }
   useEffect(() => {
     if (hasGame && !backendBacked) return;
     const controller = new AbortController();
@@ -78,6 +121,25 @@ export default function TeamProposals() {
           ? "With three players, each team has one player. Proposals vary which numbered team each player joins."
           : "Same players. Three different lineups. Take a look and find your match."}
       </p>
+      {backendBacked && <section className="regeneration-panel" aria-label="New teams">
+        <div>
+          <h2>New teams</h2>
+          {!currentRegeneration && <p role="status">Loading new teams votes...</p>}
+          {currentRegeneration?.error && <p role="alert">{currentRegeneration.error} <button className="button secondary" onClick={() => setRegenerationRetry((value) => value + 1)}>Retry</button></p>}
+          {currentRegeneration?.status && <>
+            <p aria-live="polite">{currentRegeneration.status.voteCount} of {currentRegeneration.status.requiredVotes} {currentRegeneration.status.requiredVotes === 1 ? "player wants" : "players want"} new teams</p>
+            {currentRegeneration.status.blockedByResult && <p>Teams cannot be regenerated after a result has been recorded.</p>}
+            {!currentRegeneration.status.blockedByResult && currentRegeneration.status.currentUserVoted && <p className="regeneration-voted">✓ You voted for new teams</p>}
+            {!currentRegeneration.status.blockedByResult && !currentRegeneration.status.eligible && <p>Only registered, available players can request new teams.</p>}
+            {currentRegeneration.success && <p role="status" className="regeneration-success">New team proposals generated.</p>}
+            {currentRegeneration.saveError && <p role="alert">{currentRegeneration.saveError}</p>}
+          </>}
+        </div>
+        {currentRegeneration?.status?.eligible && !currentRegeneration.status.currentUserVoted && !currentRegeneration.status.blockedByResult &&
+          <button className="button secondary" disabled={currentRegeneration.saving || voting.saving} onClick={voteForNewTeams}>
+            {currentRegeneration.saving ? "Requesting..." : "Request new teams"}
+          </button>}
+      </section>}
       {backendBacked && <div aria-live="polite">
         {voting.loading && <p>Loading votes...</p>}
         {voting.error && <p role="alert">{voting.error} <button className="button secondary" onClick={voting.retry}>Retry votes</button></p>}
@@ -112,7 +174,7 @@ export default function TeamProposals() {
               <button className={`button ${selected ? "secondary" : "primary"}`}
                 aria-pressed={selected}
                 aria-label={`${selected ? "Voted for" : "Vote for"} proposal ${proposalNumber ?? index + 1}`}
-                disabled={!voting.votes || voting.saving || selected}
+                disabled={!voting.votes || voting.saving || currentRegeneration?.saving || selected}
                 onClick={() => voting.vote(id)}>
                 {selected ? "✓ Voted" : "Vote"}
               </button>

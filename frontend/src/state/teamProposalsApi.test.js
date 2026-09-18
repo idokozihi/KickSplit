@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadTeamProposals, matchProposalPlayers } from "./teamProposalsApi.js";
+import { loadTeamProposals, loadRegenerationVote, matchProposalPlayers, requestNewTeams } from "./teamProposalsApi.js";
 
 test("loads one to three real proposals with balance scores", async (t) => {
   const signal = new AbortController().signal;
@@ -34,4 +34,35 @@ test("failed or empty generation rejects with a useful message", async (t) => {
   await assert.rejects(loadTeamProposals("42"), /Could not generate teams/);
   mock.mock.mockImplementation(async () => ({ ok: true, json: async () => [] }));
   await assert.rejects(loadTeamProposals("42"), /No valid team proposals/);
+});
+
+test("loads regeneration status for the current user", async (t) => {
+  const signal = new AbortController().signal;
+  const status = { voteCount: 2, requiredVotes: 6, currentUserVoted: false, eligible: true };
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/team-proposals/game/42/regeneration-vote?userId=7");
+    assert.equal(options.signal, signal);
+    return { ok: true, json: async () => status };
+  });
+  assert.deepEqual(await loadRegenerationVote("42", 7, signal), status);
+});
+
+test("requests new teams with the current user and returns generated proposals", async (t) => {
+  const signal = new AbortController().signal;
+  const status = { regenerated: true, voteCount: 0, proposals: [{ id: 99 }] };
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/team-proposals/game/42/regeneration-vote");
+    assert.equal(options.method, "POST");
+    assert.deepEqual(JSON.parse(options.body), { userId: 7 });
+    assert.equal(options.headers["Content-Type"], "application/json");
+    assert.equal(options.signal, signal);
+    return { ok: true, json: async () => status };
+  });
+  assert.deepEqual(await requestNewTeams("42", 7, signal), status);
+});
+
+test("regeneration errors are actionable", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 409 }));
+  await assert.rejects(loadRegenerationVote("42", 7), /Could not load new teams votes \(409\)/);
+  await assert.rejects(requestNewTeams("42", 7), /Could not request new teams \(409\)/);
 });

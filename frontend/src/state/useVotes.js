@@ -5,7 +5,7 @@ import { loadVotes, saveVote, mergeVote } from "./votesApi.js";
 export function useVotes(gameId, user, enabled) {
   const [result, setResult] = useState(null);
   const [retry, setRetry] = useState(0);
-  const key = `${gameId}:${user.email}:${retry}`;
+  const key = `${gameId}:${user.id}:${user.email}:${retry}`;
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
@@ -34,5 +34,6 @@ export function useVotes(gameId, user, enabled) {
       controller.saving = false;
     }
   }
-  return { ...current, loading: enabled && !current, vote, retry: () => setRetry((value) => value + 1) };
+  return { ...current, loading: enabled && !current, vote, retry: () => setRetry((value) => value + 1),
+    resetVotes: () => setResult((previous) => previous?.key === key ? { ...previous, votes: [], saveError: null } : previous) };
 }

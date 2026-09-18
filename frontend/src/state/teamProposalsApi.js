@@ -12,6 +12,23 @@ export async function loadTeamProposals(gameId, signal) {
   return proposals;
 }
 
+export async function loadRegenerationVote(gameId, userId, signal) {
+  const response = await fetch(apiUrl(`/team-proposals/game/${encodeURIComponent(gameId)}/regeneration-vote?userId=${encodeURIComponent(userId)}`), { signal });
+  if (!response.ok) throw new Error(`Could not load new teams votes (${response.status}). Please try again.`);
+  return response.json();
+}
+
+export async function requestNewTeams(gameId, userId, signal) {
+  const response = await fetch(apiUrl(`/team-proposals/game/${encodeURIComponent(gameId)}/regeneration-vote`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: Number(userId) }),
+    signal,
+  });
+  if (!response.ok) throw new Error(`Could not request new teams (${response.status}). Please try again.`);
+  return response.json();
+}
+
 export function matchProposalPlayers(proposals, lineup) {
   return proposals.map((proposal) => ({
     ...proposal,
