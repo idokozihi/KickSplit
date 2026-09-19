@@ -12,6 +12,7 @@ import com.kicksplit.backend.entity.GameResult;
 import com.kicksplit.backend.entity.GroupMember;
 import com.kicksplit.backend.entity.Registration;
 import com.kicksplit.backend.entity.RegistrationStatus;
+import com.kicksplit.backend.entity.ResultEntryPermission;
 import com.kicksplit.backend.entity.StoredTeamProposal;
 import com.kicksplit.backend.entity.User;
 import com.kicksplit.backend.repository.GameRepository;
@@ -58,98 +59,165 @@ public class GameResultService {
         if (request.team1Wins() < 0
                 || request.team2Wins() < 0
                 || request.team3Wins() < 0) {
-            throw new RuntimeException("Wins cannot be negative");
+
+            throw new RuntimeException(
+                    "Wins cannot be negative");
         }
 
         Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new RuntimeException("Game not found"));
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Game not found"));
 
-        User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(
+                        request.userId())
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User not found"));
 
-        StoredTeamProposal proposal = proposalRepository
-                .findById(request.proposalId())
-                .orElseThrow(() -> new RuntimeException("Proposal not found"));
+        StoredTeamProposal proposal =
+                proposalRepository
+                        .findById(request.proposalId())
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Proposal not found"));
 
-        if (!proposal.getGame().getId().equals(gameId)) {
+        if (!proposal.getGame()
+                .getId()
+                .equals(gameId)) {
+
             throw new RuntimeException(
                     "Proposal does not belong to this game");
         }
 
-        GameResult existing = gameResultRepository
-                .findByGame_Id(gameId)
-                .orElse(null);
+        GroupMember membership =
+                groupMemberRepository
+                        .findByUser_IdAndGroup_Id(
+                                user.getId(),
+                                game.getGroup().getId())
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.FORBIDDEN,
+                                        "User is not a member of this group."));
+
+        boolean isAdmin =
+                membership.isAdmin();
+
+        GameResult existing =
+                gameResultRepository
+                        .findByGame_Id(gameId)
+                        .orElse(null);
 
         GameResult savedResult;
 
+        /*
+         * FIRST RESULT
+         */
         if (existing == null) {
 
-            Registration registration = registrationRepository
-                    .findByUser_IdAndGame_Id(user.getId(), gameId)
-                    .orElseThrow(() ->
-                            new RuntimeException("User is not a participant"));
+            if (!isAdmin) {
 
-            if (registration.getStatus() != RegistrationStatus.AVAILABLE) {
-                throw new RuntimeException(
-                        "Only available participants can enter results");
+                if (game.getGroup()
+                        .getResultEntryPermission()
+                        == ResultEntryPermission.ADMINS_ONLY) {
+
+                    throw new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Only group admins can enter game results.");
+                }
+
+                Registration registration =
+                        registrationRepository
+                                .findByUser_IdAndGame_Id(
+                                        user.getId(),
+                                        gameId)
+                                .orElseThrow(() ->
+                                        new ResponseStatusException(
+                                                HttpStatus.FORBIDDEN,
+                                                "Only available players can enter results."));
+
+                if (registration.getStatus()
+                        != RegistrationStatus.AVAILABLE) {
+
+                    throw new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Only available players can enter results.");
+                }
             }
 
-            GameResult result = new GameResult(
-                    game,
-                    proposal,
-                    user,
-                    request.team1Wins(),
-                    request.team2Wins(),
-                    request.team3Wins());
+            GameResult result =
+                    new GameResult(
+                            game,
+                            proposal,
+                            user,
+                            request.team1Wins(),
+                            request.team2Wins(),
+                            request.team3Wins());
 
-            savedResult = gameResultRepository.saveAndFlush(result);
+            savedResult =
+                    gameResultRepository
+                            .saveAndFlush(result);
 
+        /*
+         * EDIT EXISTING RESULT
+         */
         } else {
 
             boolean isOriginalEditor =
-                    existing.getEnteredBy().getId().equals(user.getId());
+                    existing.getEnteredBy()
+                            .getId()
+                            .equals(user.getId());
 
-            GroupMember membership = groupMemberRepository
-                    .findByUser_IdAndGroup_Id(
-                            user.getId(),
-                            game.getGroup().getId())
-                    .orElse(null);
+            boolean playerEditingAllowed =
+                    game.getGroup()
+                            .getResultEntryPermission()
+                            == ResultEntryPermission.PLAYERS
+                            && isOriginalEditor;
 
-            boolean isAdmin =
-                    membership != null && membership.isAdmin();
+            if (!isAdmin
+                    && !playerEditingAllowed) {
 
-            if (!isOriginalEditor && !isAdmin) {
-                throw new RuntimeException(
-                        "Only the original editor or an admin can edit results");
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Only the original editor or an admin can edit results.");
             }
 
             existing.setProposal(proposal);
-            existing.setTeam1Wins(request.team1Wins());
-            existing.setTeam2Wins(request.team2Wins());
-            existing.setTeam3Wins(request.team3Wins());
+            existing.setTeam1Wins(
+                    request.team1Wins());
+            existing.setTeam2Wins(
+                    request.team2Wins());
+            existing.setTeam3Wins(
+                    request.team3Wins());
 
-            savedResult = gameResultRepository.saveAndFlush(existing);
+            savedResult =
+                    gameResultRepository
+                            .saveAndFlush(existing);
         }
 
-        ratingRecalculationService.recalculateGroup(
-                game.getGroup().getId());
+        ratingRecalculationService
+                .recalculateGroup(
+                        game.getGroup().getId());
 
         return toDto(savedResult);
     }
 
-    public GameResultResponseDto getResult(Long gameId) {
+    public GameResultResponseDto getResult(
+            Long gameId) {
 
-        GameResult result = gameResultRepository
-                .findByGame_Id(gameId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Game result not found"));
+        GameResult result =
+                gameResultRepository
+                        .findByGame_Id(gameId)
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Game result not found"));
 
         return toDto(result);
     }
 
-    private GameResultResponseDto toDto(GameResult result) {
+    private GameResultResponseDto toDto(
+            GameResult result) {
 
         return new GameResultResponseDto(
                 result.getId(),

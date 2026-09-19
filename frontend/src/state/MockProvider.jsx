@@ -104,7 +104,14 @@ export default function MockProvider({ children }) {
     }));
   const updateGroupDetails = useCallback((saved) => {
     setData((current) => ({ ...current, groups: current.groups.map((group) => group.id === saved.id
-      ? { ...group, ratingSource: saved.ratingSource, teamColors: saved.teamColors } : group) }));
+      ? {
+        ...group,
+        ratingSource: saved.ratingSource,
+        teamColors: saved.teamColors,
+        teamGenerationPermission: saved.teamGenerationPermission,
+        teamRegenerationMode: saved.teamRegenerationMode,
+        resultEntryPermission: saved.resultEntryPermission,
+      } : group) }));
   }, []);
   const addGame = async (input) => {
     const game = await createGame(input);

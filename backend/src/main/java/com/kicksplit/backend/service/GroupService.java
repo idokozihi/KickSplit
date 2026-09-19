@@ -1,22 +1,27 @@
 package com.kicksplit.backend.service;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
-import com.kicksplit.backend.entity.RatingSource;
 import org.springframework.transaction.annotation.Transactional;
-import com.kicksplit.backend.dto.GroupMemberStatsResponseDto;
+
 import com.kicksplit.backend.dto.CreateGroupRequest;
 import com.kicksplit.backend.dto.GroupMemberStatsResponseDto;
 import com.kicksplit.backend.dto.JoinGroupRequest;
 import com.kicksplit.backend.entity.Group;
 import com.kicksplit.backend.entity.GroupMember;
+import com.kicksplit.backend.entity.RatingSource;
+import com.kicksplit.backend.entity.ResultEntryPermission;
+import com.kicksplit.backend.entity.TeamColor;
+import com.kicksplit.backend.entity.TeamGenerationPermission;
+import com.kicksplit.backend.entity.TeamRegenerationMode;
 import com.kicksplit.backend.entity.User;
 import com.kicksplit.backend.repository.GroupMemberRepository;
 import com.kicksplit.backend.repository.GroupRepository;
 import com.kicksplit.backend.repository.UserRepository;
-import java.util.UUID;
-import com.kicksplit.backend.entity.TeamColor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class GroupService {
@@ -44,6 +49,7 @@ public class GroupService {
         Group group = new Group(
                 request.getName(),
                 request.getImageUrl());
+
         group.setInviteToken(UUID.randomUUID().toString());
 
         Group savedGroup = groupRepository.save(group);
@@ -78,7 +84,9 @@ public class GroupService {
     }
 
     @Transactional
-    public Group joinGroup(String inviteToken, JoinGroupRequest request) {
+    public Group joinGroup(
+            String inviteToken,
+            JoinGroupRequest request) {
 
         Group group = groupRepository.findByInviteToken(inviteToken)
                 .orElseThrow(() -> new RuntimeException("Invalid invite link"));
@@ -86,8 +94,12 @@ public class GroupService {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (groupMemberRepository.existsByUser_IdAndGroup_Id(user.getId(), group.getId())) {
-            throw new RuntimeException("User is already a member of this group");
+        if (groupMemberRepository.existsByUser_IdAndGroup_Id(
+                user.getId(),
+                group.getId())) {
+
+            throw new RuntimeException(
+                    "User is already a member of this group");
         }
 
         GroupMember membership = new GroupMember(
@@ -104,14 +116,19 @@ public class GroupService {
     }
 
     @Transactional
-    public String getInviteToken(Long groupId, Long userId) {
+    public String getInviteToken(
+            Long groupId,
+            Long userId) {
 
         GroupMember membership = groupMemberRepository
                 .findByUser_IdAndGroup_Id(userId, groupId)
-                .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User is not a member of this group"));
 
         if (!membership.isAdmin()) {
-            throw new RuntimeException("Only group admins can access the invite code");
+            throw new RuntimeException(
+                    "Only group admins can access the invite code");
         }
 
         Group group = membership.getGroup();
@@ -124,7 +141,8 @@ public class GroupService {
         return group.getInviteToken();
     }
 
-    public List<GroupMemberStatsResponseDto> getGroupMembers(Long groupId) {
+    public List<GroupMemberStatsResponseDto> getGroupMembers(
+            Long groupId) {
 
         if (!groupRepository.existsById(groupId)) {
             throw new RuntimeException("Group not found");
@@ -148,7 +166,9 @@ public class GroupService {
 
         GroupMember membership = groupMemberRepository
                 .findByUser_IdAndGroup_Id(userId, groupId)
-                .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User is not a member of this group"));
 
         if (!membership.isAdmin()) {
             throw new RuntimeException(
@@ -156,7 +176,8 @@ public class GroupService {
         }
 
         if (ratingSource == null) {
-            throw new RuntimeException("Rating source is required");
+            throw new RuntimeException(
+                    "Rating source is required");
         }
 
         group.setRatingSource(ratingSource);
@@ -177,16 +198,21 @@ public class GroupService {
 
         GroupMember membership = groupMemberRepository
                 .findByUser_IdAndGroup_Id(userId, groupId)
-                .orElseThrow(() -> new RuntimeException(
-                        "User is not a member of this group"));
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User is not a member of this group"));
 
         if (!membership.isAdmin()) {
             throw new RuntimeException(
                     "Only group admins can change team colors");
         }
 
-        if (team1Color == null || team2Color == null || team3Color == null) {
-            throw new RuntimeException("All team colors are required");
+        if (team1Color == null
+                || team2Color == null
+                || team3Color == null) {
+
+            throw new RuntimeException(
+                    "All team colors are required");
         }
 
         if (team1Color == team2Color
@@ -203,4 +229,49 @@ public class GroupService {
 
         return groupRepository.save(group);
     }
+@Transactional
+public Group updatePermissions(
+        Long groupId,
+        Long userId,
+        TeamGenerationPermission teamGenerationPermission,
+        TeamRegenerationMode teamRegenerationMode,
+        ResultEntryPermission resultEntryPermission) {
+
+    Group group = groupRepository.findById(groupId)
+            .orElseThrow(() ->
+                    new RuntimeException("Group not found"));
+
+    GroupMember membership = groupMemberRepository
+            .findByUser_IdAndGroup_Id(userId, groupId)
+            .orElseThrow(() ->
+                    new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "User is not a member of this group."));
+
+    if (!membership.isAdmin()) {
+        throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Only group admins can change permissions.");
+    }
+
+    if (teamGenerationPermission == null
+            || teamRegenerationMode == null
+            || resultEntryPermission == null) {
+
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "All group permissions are required.");
+    }
+
+    group.setTeamGenerationPermission(
+            teamGenerationPermission);
+
+    group.setTeamRegenerationMode(
+            teamRegenerationMode);
+
+    group.setResultEntryPermission(
+            resultEntryPermission);
+
+    return groupRepository.save(group);
+}
 }

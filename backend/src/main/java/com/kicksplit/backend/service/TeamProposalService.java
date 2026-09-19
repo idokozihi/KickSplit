@@ -31,6 +31,8 @@ import com.kicksplit.backend.repository.StoredProposalPlayerRepository;
 import com.kicksplit.backend.repository.StoredTeamProposalRepository;
 import com.kicksplit.backend.repository.TeamRegenerationVoteRepository;
 import com.kicksplit.backend.repository.VoteRepository;
+import com.kicksplit.backend.entity.TeamGenerationPermission;
+import com.kicksplit.backend.entity.TeamRegenerationMode;
 
 @Service
 public class TeamProposalService {
@@ -68,170 +70,275 @@ public class TeamProposalService {
         this.gameResultRepository = gameResultRepository;
         this.teamRegenerationVoteRepository = teamRegenerationVoteRepository;
     }
+@Transactional(readOnly = true)
+public List<TeamProposalResponseDto> getProposals(Long gameId) {
 
-    @Transactional
-    public List<TeamProposalResponseDto> getOrGenerateProposals(Long gameId) {
+    gameRepository.findById(gameId)
+            .orElseThrow(() ->
+                    new RuntimeException("Game not found"));
 
-        Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new RuntimeException("Game not found"));
+    return storedTeamProposalRepository
+            .findByGame_IdOrderByProposalNumber(gameId)
+            .stream()
+            .map(this::toResponseDto)
+            .toList();
+}
 
-        List<StoredTeamProposal> existing =
-                storedTeamProposalRepository
-                        .findByGame_IdOrderByProposalNumber(gameId);
+@Transactional
+public List<TeamProposalResponseDto> generateProposals(
+        Long gameId,
+        Long userId) {
 
-        if (!existing.isEmpty()) {
-            return existing.stream()
-                    .map(this::toResponseDto)
-                    .toList();
-        }
-
-        return generateAndStoreProposals(game);
+    if (userId == null) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "User ID is required.");
     }
+
+    Game game = gameRepository.findById(gameId)
+            .orElseThrow(() ->
+                    new RuntimeException("Game not found"));
+
+    requireCanGenerateTeams(game, userId);
+
+    if (gameResultRepository.findByGame_Id(gameId).isPresent()) {
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Cannot generate teams after a game result has been recorded.");
+    }
+
+    List<StoredTeamProposal> existing =
+            storedTeamProposalRepository
+                    .findByGame_IdOrderByProposalNumber(gameId);
+
+    if (!existing.isEmpty()) {
+        return existing.stream()
+                .map(this::toResponseDto)
+                .toList();
+    }
+
+    return generateAndStoreProposals(game);
+}
 
     @Transactional(readOnly = true)
-    public RegenerationVoteResponseDto getRegenerationVoteStatus(
-            Long gameId,
-            Long userId) {
+public RegenerationVoteResponseDto getRegenerationVoteStatus(
+        Long gameId,
+        Long userId) {
 
-        gameRepository.findById(gameId)
-                .orElseThrow(() -> new RuntimeException("Game not found"));
+    Game game = gameRepository.findById(gameId)
+            .orElseThrow(() ->
+                    new RuntimeException("Game not found"));
 
-        List<Registration> availableRegistrations =
-                getAvailableRegistrations(gameId);
+    List<Registration> availableRegistrations =
+            getAvailableRegistrations(gameId);
 
-        int requiredVotes = Math.min(
-                MAX_REQUIRED_REGENERATION_VOTES,
-                availableRegistrations.size());
+    boolean playerVoteEnabled =
+            game.getGroup().getTeamRegenerationMode()
+                    == TeamRegenerationMode.PLAYER_VOTE;
 
-        boolean blockedByResult =
-                gameResultRepository.findByGame_Id(gameId).isPresent();
+    int requiredVotes = playerVoteEnabled
+            ? Math.min(
+                    MAX_REQUIRED_REGENERATION_VOTES,
+                    availableRegistrations.size())
+            : 0;
 
-        boolean eligible =
-                !blockedByResult
-                        && userId != null
-                        && isAvailableUser(
-                                availableRegistrations,
-                                userId);
+    boolean blockedByResult =
+            gameResultRepository.findByGame_Id(gameId)
+                    .isPresent();
 
-        boolean currentUserVoted =
-                userId != null
-                        && teamRegenerationVoteRepository
-                                .findByUser_IdAndGame_Id(
-                                        userId,
-                                        gameId)
-                                .isPresent();
+    boolean eligible =
+            playerVoteEnabled
+                    && !blockedByResult
+                    && userId != null
+                    && isAvailableUser(
+                            availableRegistrations,
+                            userId);
 
-        int voteCount = Math.toIntExact(
-                teamRegenerationVoteRepository
-                        .countByGame_Id(gameId));
+    boolean currentUserVoted =
+            playerVoteEnabled
+                    && userId != null
+                    && teamRegenerationVoteRepository
+                            .findByUser_IdAndGame_Id(
+                                    userId,
+                                    gameId)
+                            .isPresent();
 
-        List<TeamProposalResponseDto> proposals =
-                storedTeamProposalRepository
-                        .findByGame_IdOrderByProposalNumber(gameId)
-                        .stream()
-                        .map(this::toResponseDto)
-                        .toList();
+    int voteCount = playerVoteEnabled
+            ? Math.toIntExact(
+                    teamRegenerationVoteRepository
+                            .countByGame_Id(gameId))
+            : 0;
 
-        return new RegenerationVoteResponseDto(
-                voteCount,
-                requiredVotes,
-                currentUserVoted,
-                eligible,
-                blockedByResult,
-                false,
-                proposals);
-    }
+    List<TeamProposalResponseDto> proposals =
+            storedTeamProposalRepository
+                    .findByGame_IdOrderByProposalNumber(gameId)
+                    .stream()
+                    .map(this::toResponseDto)
+                    .toList();
+
+    return new RegenerationVoteResponseDto(
+            voteCount,
+            requiredVotes,
+            currentUserVoted,
+            eligible,
+            blockedByResult,
+            false,
+            proposals);
+}
 
     @Transactional
-    public RegenerationVoteResponseDto voteForRegeneration(
-            Long gameId,
-            Long userId) {
+public RegenerationVoteResponseDto voteForRegeneration(
+        Long gameId,
+        Long userId) {
 
-        Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new RuntimeException("Game not found"));
+    Game game = gameRepository.findById(gameId)
+            .orElseThrow(() ->
+                    new RuntimeException("Game not found"));
 
-        if (gameResultRepository.findByGame_Id(gameId).isPresent()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Cannot request new teams after a game result has been recorded.");
-        }
+    if (game.getGroup().getTeamRegenerationMode()
+            != TeamRegenerationMode.PLAYER_VOTE) {
 
-        List<StoredTeamProposal> existing =
-                storedTeamProposalRepository
-                        .findByGame_IdOrderByProposalNumber(gameId);
+        throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Player voting for team regeneration is disabled.");
+    }
 
-        if (existing.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "There are no existing team proposals to regenerate.");
-        }
+    if (gameResultRepository.findByGame_Id(gameId).isPresent()) {
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Cannot request new teams after a game result has been recorded.");
+    }
 
-        List<Registration> availableRegistrations =
-                getAvailableRegistrations(gameId);
+    List<StoredTeamProposal> existing =
+            storedTeamProposalRepository
+                    .findByGame_IdOrderByProposalNumber(gameId);
 
-        Registration registration =
-                availableRegistrations.stream()
-                        .filter(item ->
-                                item.getUser()
-                                        .getId()
-                                        .equals(userId))
-                        .findFirst()
-                        .orElseThrow(() ->
-                                new ResponseStatusException(
-                                        HttpStatus.FORBIDDEN,
-                                        "Only available players can vote for new teams."));
+    if (existing.isEmpty()) {
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "There are no existing team proposals to regenerate.");
+    }
 
-        int requiredVotes = Math.min(
-                MAX_REQUIRED_REGENERATION_VOTES,
-                availableRegistrations.size());
+    List<Registration> availableRegistrations =
+            getAvailableRegistrations(gameId);
 
-        boolean alreadyVoted =
-                teamRegenerationVoteRepository
-                        .findByUser_IdAndGame_Id(
-                                userId,
-                                gameId)
-                        .isPresent();
+    Registration registration =
+            availableRegistrations.stream()
+                    .filter(item ->
+                            item.getUser()
+                                    .getId()
+                                    .equals(userId))
+                    .findFirst()
+                    .orElseThrow(() ->
+                            new ResponseStatusException(
+                                    HttpStatus.FORBIDDEN,
+                                    "Only available players can vote for new teams."));
 
-        if (!alreadyVoted) {
-            teamRegenerationVoteRepository.save(
-                    new TeamRegenerationVote(
-                            registration.getUser(),
-                            game));
+    int requiredVotes = Math.min(
+            MAX_REQUIRED_REGENERATION_VOTES,
+            availableRegistrations.size());
 
-            teamRegenerationVoteRepository.flush();
-        }
+    boolean alreadyVoted =
+            teamRegenerationVoteRepository
+                    .findByUser_IdAndGame_Id(
+                            userId,
+                            gameId)
+                    .isPresent();
 
-        int voteCount = Math.toIntExact(
-                teamRegenerationVoteRepository
-                        .countByGame_Id(gameId));
+    if (!alreadyVoted) {
+        teamRegenerationVoteRepository.save(
+                new TeamRegenerationVote(
+                        registration.getUser(),
+                        game));
 
-        if (requiredVotes > 0
-                && voteCount >= requiredVotes) {
+        teamRegenerationVoteRepository.flush();
+    }
 
-            List<TeamProposalResponseDto> regenerated =
-                    regenerateProposals(game, existing);
+    int voteCount = Math.toIntExact(
+            teamRegenerationVoteRepository
+                    .countByGame_Id(gameId));
 
-            return new RegenerationVoteResponseDto(
-                    0,
-                    requiredVotes,
-                    false,
-                    true,
-                    false,
-                    true,
-                    regenerated);
-        }
+    if (requiredVotes > 0
+            && voteCount >= requiredVotes) {
+
+        List<TeamProposalResponseDto> regenerated =
+                regenerateProposals(
+                        game,
+                        existing);
 
         return new RegenerationVoteResponseDto(
-                voteCount,
+                0,
                 requiredVotes,
-                true,
+                false,
                 true,
                 false,
-                false,
-                existing.stream()
-                        .map(this::toResponseDto)
-                        .toList());
+                true,
+                regenerated);
     }
+
+    return new RegenerationVoteResponseDto(
+            voteCount,
+            requiredVotes,
+            true,
+            true,
+            false,
+            false,
+            existing.stream()
+                    .map(this::toResponseDto)
+                    .toList());
+}
+
+@Transactional
+public List<TeamProposalResponseDto> regenerateTeams(
+        Long gameId,
+        Long userId) {
+
+    if (userId == null) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "User ID is required.");
+    }
+
+    Game game = gameRepository.findById(gameId)
+            .orElseThrow(() ->
+                    new RuntimeException("Game not found"));
+
+    GroupMember membership =
+            groupMemberRepository
+                    .findByUser_IdAndGroup_Id(
+                            userId,
+                            game.getGroup().getId())
+                    .orElseThrow(() ->
+                            new ResponseStatusException(
+                                    HttpStatus.FORBIDDEN,
+                                    "User is not a member of this group."));
+
+    if (!membership.isAdmin()) {
+        throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Only group admins can regenerate teams directly.");
+    }
+
+    if (gameResultRepository.findByGame_Id(gameId).isPresent()) {
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Cannot regenerate teams after a game result has been recorded.");
+    }
+
+    List<StoredTeamProposal> existing =
+            storedTeamProposalRepository
+                    .findByGame_IdOrderByProposalNumber(gameId);
+
+    if (existing.isEmpty()) {
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "There are no existing team proposals to regenerate.");
+    }
+
+    return regenerateProposals(
+            game,
+            existing);
+}
 
     private List<TeamProposalResponseDto> regenerateProposals(
             Game game,
@@ -346,6 +453,51 @@ public class TeamProposalService {
                                 .getId()
                                 .equals(userId));
     }
+
+
+    private void requireCanGenerateTeams(
+        Game game,
+        Long userId) {
+
+    GroupMember membership = groupMemberRepository
+            .findByUser_IdAndGroup_Id(
+                    userId,
+                    game.getGroup().getId())
+            .orElseThrow(() ->
+                    new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Only group members can generate teams."));
+
+    // Admin is always allowed.
+    if (membership.isAdmin()) {
+        return;
+    }
+
+    if (game.getGroup().getTeamGenerationPermission()
+            == TeamGenerationPermission.ADMINS_ONLY) {
+
+        throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Only group admins can generate teams.");
+    }
+
+    Registration registration = registrationRepository
+            .findByUser_IdAndGame_Id(
+                    userId,
+                    game.getId())
+            .orElseThrow(() ->
+                    new ResponseStatusException(
+                            HttpStatus.FORBIDDEN,
+                            "Only available players can generate teams."));
+
+    if (registration.getStatus()
+            != RegistrationStatus.AVAILABLE) {
+
+        throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Only available players can generate teams.");
+    }
+}
 
     private List<PlayerCandidate> collectPlayers(
             Game game) {

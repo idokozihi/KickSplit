@@ -1,27 +1,25 @@
 package com.kicksplit.backend.controller;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.kicksplit.backend.service.GroupService;
-import com.kicksplit.backend.dto.UpdateTeamColorsRequest;
-
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-
-import com.kicksplit.backend.dto.CreateGroupRequest;
-import com.kicksplit.backend.entity.Group;
-
 import java.util.List;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import com.kicksplit.backend.dto.GroupMemberStatsResponseDto;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+import com.kicksplit.backend.dto.CreateGroupRequest;
+import com.kicksplit.backend.dto.GroupMemberStatsResponseDto;
 import com.kicksplit.backend.dto.GroupResponseDto;
-import com.kicksplit.backend.dto.JoinGroupRequest;
 import com.kicksplit.backend.dto.InviteTokenResponse;
+import com.kicksplit.backend.dto.JoinGroupRequest;
+import com.kicksplit.backend.dto.UpdateGroupPermissionsRequest;
 import com.kicksplit.backend.dto.UpdateRatingSourceRequest;
+import com.kicksplit.backend.dto.UpdateTeamColorsRequest;
+import com.kicksplit.backend.entity.Group;
+import com.kicksplit.backend.service.GroupService;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -34,13 +32,16 @@ public class GroupController {
     }
 
     @PostMapping
-    public GroupResponseDto createGroup(@RequestBody CreateGroupRequest request) {
+    public GroupResponseDto createGroup(
+            @RequestBody CreateGroupRequest request) {
+
         Group group = groupService.createGroup(request);
         return GroupResponseDto.fromGroup(group);
     }
 
     @GetMapping
     public List<GroupResponseDto> getAllGroups() {
+
         return groupService.getAllGroups()
                 .stream()
                 .map(GroupResponseDto::fromGroup)
@@ -48,13 +49,17 @@ public class GroupController {
     }
 
     @GetMapping("/{id}")
-    public GroupResponseDto getGroupById(@PathVariable Long id) {
+    public GroupResponseDto getGroupById(
+            @PathVariable Long id) {
+
         Group group = groupService.getGroupById(id);
         return GroupResponseDto.fromGroup(group);
     }
 
     @GetMapping("/user/{userId}")
-    public List<GroupResponseDto> getGroupsByUserId(@PathVariable Long userId) {
+    public List<GroupResponseDto> getGroupsByUserId(
+            @PathVariable Long userId) {
+
         return groupService.getGroupsByUserId(userId)
                 .stream()
                 .map(GroupResponseDto::fromGroup)
@@ -66,7 +71,10 @@ public class GroupController {
             @PathVariable Long groupId,
             @PathVariable Long userId) {
 
-        String token = groupService.getInviteToken(groupId, userId);
+        String token = groupService.getInviteToken(
+                groupId,
+                userId);
+
         return new InviteTokenResponse(token);
     }
 
@@ -75,7 +83,10 @@ public class GroupController {
             @PathVariable String inviteToken,
             @RequestBody JoinGroupRequest request) {
 
-        Group group = groupService.joinGroup(inviteToken, request);
+        Group group = groupService.joinGroup(
+                inviteToken,
+                request);
+
         return GroupResponseDto.fromGroup(group);
     }
 
@@ -110,6 +121,21 @@ public class GroupController {
                 request.team1Color(),
                 request.team2Color(),
                 request.team3Color());
+
+        return GroupResponseDto.fromGroup(group);
+    }
+
+    @PatchMapping("/{groupId}/permissions")
+    public GroupResponseDto updatePermissions(
+            @PathVariable Long groupId,
+            @RequestBody UpdateGroupPermissionsRequest request) {
+
+        Group group = groupService.updatePermissions(
+                groupId,
+                request.userId(),
+                request.teamGenerationPermission(),
+                request.teamRegenerationMode(),
+                request.resultEntryPermission());
 
         return GroupResponseDto.fromGroup(group);
     }

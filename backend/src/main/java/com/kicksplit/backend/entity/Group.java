@@ -32,17 +32,36 @@ public class Group {
     @Enumerated(EnumType.STRING)
     private TeamColor team3Color;
 
+    @Enumerated(EnumType.STRING)
+    private TeamGenerationPermission teamGenerationPermission;
+
+    @Enumerated(EnumType.STRING)
+    private TeamRegenerationMode teamRegenerationMode;
+
+    @Enumerated(EnumType.STRING)
+    private ResultEntryPermission resultEntryPermission;
+
     public Group() {
     }
 
     public Group(String name, String imageUrl) {
         this.name = name;
         this.imageUrl = imageUrl;
+
         this.ratingSource = RatingSource.APP_RATING;
 
         this.team1Color = TeamColor.RED;
         this.team2Color = TeamColor.BLACK;
         this.team3Color = TeamColor.WHITE;
+
+        this.teamGenerationPermission =
+                TeamGenerationPermission.PLAYERS;
+
+        this.teamRegenerationMode =
+                TeamRegenerationMode.PLAYER_VOTE;
+
+        this.resultEntryPermission =
+                ResultEntryPermission.PLAYERS;
     }
 
     public Long getId() {
@@ -111,5 +130,44 @@ public class Group {
 
     public void setTeam3Color(TeamColor team3Color) {
         this.team3Color = team3Color;
+    }
+
+    public TeamGenerationPermission getTeamGenerationPermission() {
+        return teamGenerationPermission != null
+                ? teamGenerationPermission
+                : TeamGenerationPermission.PLAYERS;
+    }
+
+    public void setTeamGenerationPermission(
+            TeamGenerationPermission teamGenerationPermission) {
+
+        this.teamGenerationPermission =
+                teamGenerationPermission;
+    }
+
+    public TeamRegenerationMode getTeamRegenerationMode() {
+        return teamRegenerationMode != null
+                ? teamRegenerationMode
+                : TeamRegenerationMode.PLAYER_VOTE;
+    }
+
+    public void setTeamRegenerationMode(
+            TeamRegenerationMode teamRegenerationMode) {
+
+        this.teamRegenerationMode =
+                teamRegenerationMode;
+    }
+
+    public ResultEntryPermission getResultEntryPermission() {
+        return resultEntryPermission != null
+                ? resultEntryPermission
+                : ResultEntryPermission.PLAYERS;
+    }
+
+    public void setResultEntryPermission(
+            ResultEntryPermission resultEntryPermission) {
+
+        this.resultEntryPermission =
+                resultEntryPermission;
     }
 }

@@ -1,5 +1,6 @@
 import { apiUrl } from "./apiBase.js";
 import { colorsFromGroupDto, validTeamColors } from "./teamColors.js";
+import { permissionsFromGroup } from "./groupPermissions.js";
 
 async function request(path, options = {}) {
   let response;
@@ -14,6 +15,9 @@ async function request(path, options = {}) {
     }
     if (path.endsWith("/team-colors") && response.status === 403) {
       throw new Error("Only group admins can change team colors.");
+    }
+    if (path.endsWith("/permissions") && response.status === 403) {
+      throw new Error("Only group admins can change group permissions.");
     }
     if (path.startsWith("/groups/join/")) {
       let message = "";
@@ -47,6 +51,7 @@ export function mapGroup(dto) {
     description: "Your crew. Your game.",
     ratingSource: dto.ratingSource || "APP_RATING",
     teamColors: colorsFromGroupDto(dto),
+    ...permissionsFromGroup(dto),
     // The Groups DTO does not expose membership or player ratings.
     members: [],
     ratings: {},
@@ -84,6 +89,15 @@ export async function saveTeamColors(groupId, userId, colors) {
   });
   const responseColors = [response.team1Color, response.team2Color, response.team3Color].map((value) => value?.toLowerCase());
   if (!validTeamColors(responseColors)) throw new Error("The server did not return saved team colors. Please try again after the API is updated.");
+  return mapGroup(response);
+}
+
+export async function saveGroupPermissions(groupId, userId, permissions) {
+  const response = await request(`/groups/${encodeURIComponent(groupId)}/permissions`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: Number(userId), ...permissionsFromGroup(permissions) }),
+  });
   return mapGroup(response);
 }
 

@@ -2,17 +2,24 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useApp } from "../state/context";
 import { participantCount, proposedDate, rankedDays } from "../state/mock";
-import { loadGroup, loadGroupMembers, loadInviteToken, saveRatingSource, saveTeamColors } from "../state/groupsApi";
+import { loadGroup, loadGroupMembers, loadInviteToken, saveGroupPermissions, saveRatingSource, saveTeamColors } from "../state/groupsApi";
 import { inviteUrl } from "../state/invite";
 import { Avatar, BackLink, EmptyState, GroupImage, Icon, Modal, Section } from "../components/UI";
 import { RatingFields } from "../components/Forms";
 import GroupDateSelector from "../components/GroupDateSelector";
 import { changedTeamColor, groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
+import { permissionsFromGroup } from "../state/groupPermissions";
 
 const ratingText = (value) => Number.isFinite(value) ? Number(value).toFixed(2) : "—";
 const percentageText = (value) => `${Math.round((Number.isFinite(value) ? value : 0) * 100)}%`;
 const statText = (value) => Number.isFinite(value) ? value : 0;
 const selfRatingText = (value) => Number.isFinite(value) ? value : "—";
+
+const permissionSettings = [
+  { key: "teamGenerationPermission", label: "Generate teams", options: [["ADMINS_ONLY", "Admins only"], ["PLAYERS", "Players"]] },
+  { key: "teamRegenerationMode", label: "Regenerate teams", options: [["ADMINS_ONLY", "Admins only"], ["PLAYER_VOTE", "Player vote"]] },
+  { key: "resultEntryPermission", label: "Enter game result", options: [["ADMINS_ONLY", "Admins only"], ["PLAYERS", "Players"]] },
+];
 
 export default function Group() {
   const { groupId } = useParams();
@@ -32,8 +39,13 @@ export default function Group() {
   const [colorSaving, setColorSaving] = useState(false);
   const [colorError, setColorError] = useState(null);
   const [colorSaved, setColorSaved] = useState(null);
+  const [permissionDraft, setPermissionDraft] = useState(null);
+  const [permissionSaving, setPermissionSaving] = useState(false);
+  const [permissionError, setPermissionError] = useState(null);
+  const [permissionSaved, setPermissionSaved] = useState(null);
   const colorRequest = useRef(false);
   const sourceRequest = useRef(false);
+  const permissionRequest = useRef(false);
   const detailsKey = `${groupId}:${user.id}:${detailsRetry}`;
   const hasGroup = Boolean(group);
 
@@ -58,6 +70,15 @@ export default function Group() {
   const currentMember = members?.find((member) => String(member.userId) === String(user.id));
   const ratingSource = currentDetails?.group?.ratingSource || group?.ratingSource;
   const teamColors = groupTeamColors(currentDetails?.group || group);
+  const savedPermissions = permissionsFromGroup(currentDetails?.group || group);
+  const displayedPermissions = permissionDraft || savedPermissions;
+
+  function openSettings() {
+    setPermissionDraft(savedPermissions);
+    setPermissionError(null);
+    setPermissionSaved(null);
+    setSettingsOpen(true);
+  }
 
   async function changeTeamColor(index, color) {
     if (!currentMember?.admin || colorRequest.current) return;
@@ -93,6 +114,26 @@ export default function Group() {
     } finally {
       sourceRequest.current = false;
       setSourceSaving(false);
+    }
+  }
+
+  async function savePermissions() {
+    if (!currentMember?.admin || permissionRequest.current || !permissionDraft) return;
+    permissionRequest.current = true;
+    setPermissionSaving(true);
+    setPermissionError(null);
+    setPermissionSaved(null);
+    try {
+      const saved = await saveGroupPermissions(groupId, user.id, permissionDraft);
+      setDetails((previous) => previous?.key === detailsKey ? { ...previous, group: saved } : previous);
+      updateGroupDetails(saved);
+      setPermissionDraft(permissionsFromGroup(saved));
+      setPermissionSaved({ key: detailsKey, message: "Group permissions saved." });
+    } catch (error) {
+      setPermissionError({ key: detailsKey, message: error.message || "Could not save group permissions. Please try again." });
+    } finally {
+      permissionRequest.current = false;
+      setPermissionSaving(false);
     }
   }
 
@@ -143,7 +184,7 @@ export default function Group() {
       <div className="group-actions">
         <button className="group-hero-action" onClick={openInvite}><Icon name="plus" size={17} /><span>Invite</span></button>
         <Link className="group-hero-action" to={`/groups/${groupId}/chat`}><Icon name="chat" size={17} /><span>Chat</span></Link>
-        <button className="group-hero-action" onClick={() => setSettingsOpen(true)}><Icon name="settings" size={17} /><span>Settings</span></button>
+        <button className="group-hero-action" onClick={openSettings}><Icon name="settings" size={17} /><span>Settings</span></button>
       </div>
     </header>
     <div className="group-detail-layout">
@@ -229,6 +270,29 @@ export default function Group() {
             {members && !currentMember?.admin && <p className="form-hint">Only group admins can change this setting.</p>}
             {sourceSaving && <p role="status" className="form-hint">Saving rating source...</p>}
             {sourceError?.key === detailsKey && <p className="error" role="alert">{sourceError.message}</p>}
+          </div>
+        </Section>
+        <Section title="Permissions">
+          <div className="panel permission-settings">
+            <p className="muted">Choose who can manage teams and results in this group.</p>
+            {permissionSettings.map((setting) => <fieldset className="permission-setting" key={setting.key} disabled={!currentMember?.admin || permissionSaving}>
+              <legend>{setting.label}</legend>
+              <div className="permission-options" role="group" aria-label={setting.label}>
+                {setting.options.map(([value, label]) => <button key={value} type="button"
+                  className={`button ${displayedPermissions[setting.key] === value ? "primary" : "secondary"}`}
+                  aria-pressed={displayedPermissions[setting.key] === value}
+                  onClick={() => {
+                    setPermissionDraft((current) => ({ ...(current || savedPermissions), [setting.key]: value }));
+                    setPermissionSaved(null);
+                  }}>{label}</button>)}
+              </div>
+            </fieldset>)}
+            {!currentDetails && <p className="form-hint" role="status">Loading group permissions...</p>}
+            {members && !currentMember?.admin && <p className="form-hint">Only group admins can change group permissions.</p>}
+            {currentMember?.admin && <button type="button" className="button primary permission-save"
+              disabled={permissionSaving} onClick={savePermissions}>{permissionSaving ? "Saving permissions..." : "Save permissions"}</button>}
+            {permissionError?.key === detailsKey && <p className="error" role="alert">{permissionError.message}</p>}
+            {permissionSaved?.key === detailsKey && <p className="success" role="status">{permissionSaved.message}</p>}
           </div>
         </Section>
     </Modal>}

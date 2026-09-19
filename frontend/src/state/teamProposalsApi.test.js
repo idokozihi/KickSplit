@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadTeamProposals, loadRegenerationVote, matchProposalPlayers, requestNewTeams } from "./teamProposalsApi.js";
+import { generateTeamProposals, loadTeamProposals, loadRegenerationVote, matchProposalPlayers, regenerateTeams, requestNewTeams } from "./teamProposalsApi.js";
 
 test("loads one to three real proposals with balance scores", async (t) => {
   const signal = new AbortController().signal;
@@ -29,11 +29,35 @@ test("labels unique lineup matches without replacing backend ratings or order", 
   assert.equal(proposals[0].teams[0][0].id, undefined);
 });
 
-test("failed or empty generation rejects with a useful message", async (t) => {
+test("empty proposal lists are valid while malformed responses still reject", async (t) => {
   const mock = t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 500 }));
-  await assert.rejects(loadTeamProposals("42"), /Could not generate teams/);
+  await assert.rejects(loadTeamProposals("42"), /Could not load team proposals/);
   mock.mock.mockImplementation(async () => ({ ok: true, json: async () => [] }));
+  assert.deepEqual(await loadTeamProposals("42"), []);
+  mock.mock.mockImplementation(async () => ({ ok: true, json: async () => [{ teams: [] }] }));
   await assert.rejects(loadTeamProposals("42"), /No valid team proposals/);
+});
+
+test("generate and direct regenerate use their dedicated endpoints", async (t) => {
+  const calls = [];
+  const proposals = [{ id: 99, proposalNumber: 1, teams: [[], [], []], balanceScore: 0.4 }];
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    calls.push({ url, options });
+    return { ok: true, json: async () => proposals };
+  });
+  assert.deepEqual(await generateTeamProposals("42", 7), proposals);
+  assert.deepEqual(await regenerateTeams("42", 7), proposals);
+  assert.deepEqual(calls.map(({ url, options }) => [url, options.method, JSON.parse(options.body)]), [
+    ["/api/team-proposals/game/42/generate", "POST", { userId: 7 }],
+    ["/api/team-proposals/game/42/regenerate", "POST", { userId: 7 }],
+  ]);
+});
+
+test("generation and regeneration surface backend permission and conflict messages", async (t) => {
+  const mocked = t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 403, json: async () => ({ message: "Backend permission detail" }) }));
+  await assert.rejects(generateTeamProposals("42", 7), /Backend permission detail/);
+  mocked.mock.mockImplementation(async () => ({ ok: false, status: 409, json: async () => { throw new Error(); } }));
+  await assert.rejects(regenerateTeams("42", 7), /after a game result/);
 });
 
 test("loads regeneration status for the current user", async (t) => {
@@ -63,6 +87,6 @@ test("requests new teams with the current user and returns generated proposals",
 
 test("regeneration errors are actionable", async (t) => {
   t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 409 }));
-  await assert.rejects(loadRegenerationVote("42", 7), /Could not load new teams votes \(409\)/);
-  await assert.rejects(requestNewTeams("42", 7), /Could not request new teams \(409\)/);
+  await assert.rejects(loadRegenerationVote("42", 7), /Could not load new teams votes/);
+  await assert.rejects(requestNewTeams("42", 7), /after a game result/);
 });

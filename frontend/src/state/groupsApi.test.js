@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadGroup, loadGroupMembers, loadGroups, loadInviteToken, saveGroup, saveRatingSource, saveTeamColors } from "./groupsApi.js";
+import { loadGroup, loadGroupMembers, loadGroups, loadInviteToken, mapGroup, saveGroup, saveGroupPermissions, saveRatingSource, saveTeamColors } from "./groupsApi.js";
 
 test("group detail and members load from their endpoints", async (t) => {
   const calls = [];
@@ -9,17 +9,27 @@ test("group detail and members load from their endpoints", async (t) => {
     calls.push({ url, signal: options.signal });
     return { ok: true, json: async () => url.endsWith("/members")
       ? [{ userId: 7, name: "Alex", appRating: 3.5333333333, ratedGames: 1, totalWins: 5, winRate: 1 }]
-      : { id: 42, name: "Friday FC", ratingSource: "SELF_RATING", team1Color: "BLUE", team2Color: "BLACK", team3Color: "WHITE" } };
+      : { id: 42, name: "Friday FC", ratingSource: "SELF_RATING", team1Color: "BLUE", team2Color: "BLACK", team3Color: "WHITE", teamGenerationPermission: "ADMINS_ONLY", teamRegenerationMode: "ADMINS_ONLY", resultEntryPermission: "ADMINS_ONLY" } };
   });
   const group = await loadGroup(42, signal);
   const members = await loadGroupMembers(42, signal);
   assert.equal(group.ratingSource, "SELF_RATING");
   assert.deepEqual(group.teamColors, ["blue", "black", "white"]);
+  assert.equal(group.teamGenerationPermission, "ADMINS_ONLY");
+  assert.equal(group.teamRegenerationMode, "ADMINS_ONLY");
+  assert.equal(group.resultEntryPermission, "ADMINS_ONLY");
   assert.equal(members[0].appRating, 3.5333333333);
   assert.deepEqual(calls, [
     { url: "/api/groups/42", signal },
     { url: "/api/groups/42/members", signal },
   ]);
+});
+
+test("older group responses receive compatible permission defaults", () => {
+  assert.deepEqual(
+    (({ teamGenerationPermission, teamRegenerationMode, resultEntryPermission }) => ({ teamGenerationPermission, teamRegenerationMode, resultEntryPermission }))(mapGroup({ id: 42, name: "Friday FC" })),
+    { teamGenerationPermission: "PLAYERS", teamRegenerationMode: "PLAYER_VOTE", resultEntryPermission: "PLAYERS" },
+  );
 });
 
 test("reloading groups restores saved team colors for the team builder", async (t) => {
@@ -66,6 +76,32 @@ test("admin rating source change uses the logged-in user id and saved response",
 test("rating source authorization failures explain the admin requirement", async (t) => {
   t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 403 }));
   await assert.rejects(saveRatingSource(42, 7, "SELF_RATING"), /Only group admins/);
+});
+
+test("admin permission save PATCHes all settings and maps the saved group", async (t) => {
+  const permissions = {
+    teamGenerationPermission: "ADMINS_ONLY",
+    teamRegenerationMode: "ADMINS_ONLY",
+    resultEntryPermission: "PLAYERS",
+  };
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/groups/42/permissions");
+    assert.equal(options.method, "PATCH");
+    assert.equal(options.headers["Content-Type"], "application/json");
+    assert.deepEqual(JSON.parse(options.body), { userId: 7, ...permissions });
+    return { ok: true, json: async () => ({ id: 42, name: "Friday FC", ...permissions }) };
+  });
+  const saved = await saveGroupPermissions(42, 7, permissions);
+  assert.deepEqual({
+    teamGenerationPermission: saved.teamGenerationPermission,
+    teamRegenerationMode: saved.teamRegenerationMode,
+    resultEntryPermission: saved.resultEntryPermission,
+  }, permissions);
+});
+
+test("permission saves explain admin-only failures", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 403 }));
+  await assert.rejects(saveGroupPermissions(42, 7, {}), /Only group admins/);
 });
 
 test("admins request an invite token for their group and backend user id", async (t) => {
