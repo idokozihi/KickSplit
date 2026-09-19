@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../state/context";
+import { processProfileImage } from "../utils/profileImage";
 import { Avatar, GroupImage, Icon, Modal } from "./UI";
 
 export function RatingFields({ value, onChange }) {
@@ -212,31 +213,37 @@ export function ProfileForm({ onSave, setup = false }) {
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
   const [saving, setSaving] = useState(false);
-  function upload(event) {
-    const file = event.target.files?.[0];
+  const photoRef = useRef(user.photo);
+  const processingRef = useRef(false);
+  const savingRef = useRef(false);
+  async function upload(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
-    if (
-      !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-      file.size > 3 * 1024 * 1024
-    ) {
-      setError("Choose a JPG, PNG or WebP image under 3 MB.");
+    if (processingRef.current || savingRef.current) {
+      input.value = "";
       return;
     }
+
+    processingRef.current = true;
     setError("");
     setReading(true);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhoto(reader.result);
+
+    try {
+      const processedPhoto = await processProfileImage(file);
+      photoRef.current = processedPhoto;
+      setPhoto(processedPhoto);
+    } catch (failure) {
+      setError(failure.message || "We could not process that photo. Please try another image.");
+    } finally {
+      processingRef.current = false;
       setReading(false);
-    };
-    reader.onerror = () => {
-      setError("Could not read that image. Try another file.");
-      setReading(false);
-    };
-    reader.readAsDataURL(file);
+      input.value = "";
+    }
   }
   async function submit(event) {
     event.preventDefault();
+    if (processingRef.current || savingRef.current) return;
     const fields = new FormData(event.currentTarget);
     const name = fields.get("name").trim();
     if (!name) {
@@ -244,33 +251,36 @@ export function ProfileForm({ onSave, setup = false }) {
       return;
     }
     setError("");
+    savingRef.current = true;
     setSaving(true);
     try {
       await onSave({
         name,
         username: fields.get("username").trim(),
-        photo,
+        photo: photoRef.current,
         ...(!setup ? { email: fields.get("email").trim() } : {}),
       });
     } catch (failure) {
       setError(failure.message || "Could not save your profile. Please try again.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
   return (
-    <form className="form" onSubmit={submit}>
+    <form className="form" onSubmit={submit} aria-busy={reading || saving}>
       <div className="photo-field">
         <Avatar name={user.name} photo={photo} large />
-        <label className="upload-button">
-          {photo ? "Change photo" : "Add a photo"}
+        <label className={`upload-button ${reading || saving ? "disabled" : ""}`}>
+          {reading ? "Processing photo..." : photo ? "Change photo" : "Add a photo"}
           <input
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept="image/*"
             onChange={upload}
+            disabled={reading || saving}
           />
         </label>
-        <small>Optional · JPG, PNG or WebP · up to 3 MB</small>
+        <small>{reading ? "Resizing and compressing your photo..." : "Optional · Photos are resized before upload"}</small>
       </div>
       <label>
         Full name
@@ -314,7 +324,7 @@ export function ProfileForm({ onSave, setup = false }) {
           {error}
         </p>
       )}
-      <button className="button primary" disabled={reading || saving}>
+      <button className="button primary" type="submit" disabled={reading || saving}>
         {saving ? "Saving..." : setup ? "Continue" : "Save changes"}
         <Icon name="arrow" size={18} />
       </button>

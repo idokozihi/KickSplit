@@ -2,7 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loginUser, registerUser } from "./authApi.js";
 
-const backendUser = { id: 7, name: "Alex", username: "alex", imageUrl: null, email: "alex@example.com" };
+const backendUser = {
+  id: 7,
+  name: "Alex",
+  username: "alex",
+  imageUrl: "data:image/jpeg;base64,persisted-photo",
+  email: "alex@example.com",
+};
 
 test("login and registration send credentials and preserve the backend id", async (t) => {
   const calls = [];
@@ -12,7 +18,13 @@ test("login and registration send credentials and preserve the backend id", asyn
   });
   const user = await loginUser("alex@example.com", "secret123");
   await registerUser("Alex", "alex@example.com", "secret123");
-  assert.deepEqual(user, { id: 7, name: "Alex", username: "alex", email: "alex@example.com", photo: "" });
+  assert.deepEqual(user, {
+    id: 7,
+    name: "Alex",
+    username: "alex",
+    email: "alex@example.com",
+    photo: "data:image/jpeg;base64,persisted-photo",
+  });
   assert.deepEqual(calls.map(([url, options]) => [url, options.method, JSON.parse(options.body)]), [
     ["/api/auth/login", "POST", { email: "alex@example.com", password: "secret123" }],
     ["/api/auth/register", "POST", { name: "Alex", email: "alex@example.com", password: "secret123" }],

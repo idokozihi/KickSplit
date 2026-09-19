@@ -1265,6 +1265,13 @@ input:focus {
   outline: 3px solid #5a8738;
   outline-offset: 3px;
 }
+.upload-button.disabled {
+  opacity: .65;
+  cursor: default;
+}
+.upload-button.disabled input {
+  cursor: default;
+}
 .input-prefix {
   position: relative;
 }
