@@ -41,6 +41,11 @@ public class AuthService {
                 passwordHash);
 
         User saved = userRepository.save(user);
+        System.out.println(
+        "NEW REGISTER - userId=" + saved.getId()
+        + " - name=" + saved.getName()
+        + " - email=" + saved.getEmail()
+);
 
         return UserResponseDto.fromUser(saved);
     }
@@ -56,7 +61,11 @@ public class AuthService {
                 !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new RuntimeException("Invalid email or password");
         }
-
+        System.out.println(
+        "LOGIN SUCCESS - userId=" + user.getId()
+        + " - name=" + user.getName()
+        + " - email=" + user.getEmail()
+);
         return UserResponseDto.fromUser(user);
     }
 }
