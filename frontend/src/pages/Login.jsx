@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Brand, Icon } from "../components/UI";
 import { useApp } from "../state/context";
-import { destinationAfterAuth, pendingInvite } from "../state/invite";
+import { destinationAfterAuth, getPendingInvite, pendingInvite } from "../state/invite";
 
 export default function Login() {
   const [signup, setSignup] = useState(false);
@@ -11,7 +11,7 @@ export default function Login() {
   const { login, register } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
-  const returnTo = pendingInvite(location.state?.from);
+  const returnTo = pendingInvite(location.state?.from) || getPendingInvite();
   async function submit(event) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);

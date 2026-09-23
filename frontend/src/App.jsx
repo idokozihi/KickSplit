@@ -1,4 +1,5 @@
-import { Navigate, Outlet, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, Outlet, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "./state/context";
 
 import AppLayout from "./components/AppLayout";
@@ -15,13 +16,19 @@ import Game from "./pages/Game";
 import TeamProposals from "./pages/TeamProposals";
 import Profile from "./pages/Profile";
 import JoinInvite from "./pages/JoinInvite";
-import { pendingInvite } from "./state/invite";
+import { storePendingInvite } from "./state/invite";
 
 function InviteRoute({ user }) {
   const location = useLocation();
-  return user
-    ? <AppLayout />
-    : <Navigate to="/" replace state={{ from: pendingInvite(location.pathname) }} />;
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) return;
+    const from = storePendingInvite(location.pathname);
+    navigate("/", { replace: true, state: { from } });
+  }, [location.pathname, navigate, user]);
+
+  return user ? <AppLayout /> : null;
 }
 
 function App() {

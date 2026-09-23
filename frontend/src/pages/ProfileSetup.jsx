@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Brand } from "../components/UI";
 import { ProfileForm } from "../components/Forms";
 import { useApp } from "../state/context";
-import { pendingInvite } from "../state/invite";
+import { destinationAfterProfileSetup } from "../state/invite";
 
 export default function ProfileSetup() {
   const { updateUser } = useApp();
@@ -19,7 +19,7 @@ export default function ProfileSetup() {
           setup
           onSave={async (values) => {
             await updateUser(values);
-            navigate(pendingInvite(location.state?.from) || "/home");
+            navigate(destinationAfterProfileSetup(location.state?.from));
           }}
         />
       </div>
