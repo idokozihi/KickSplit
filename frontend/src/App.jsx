@@ -35,7 +35,7 @@ function App() {
   const { user } = useApp();
   return (
     <Routes>
-      <Route path="/" element={user ? <Navigate to="/home" replace /> : <Login />} />
+      <Route path="/" element={<Login />} />
       <Route path="/join/:inviteToken" element={<InviteRoute user={user} />}>
         <Route index element={<JoinInvite />} />
       </Route>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Brand, Icon } from "../components/UI";
 import { useApp } from "../state/context";
 import { destinationAfterAuth, getPendingInvite, pendingInvite } from "../state/invite";
@@ -8,7 +8,7 @@ export default function Login() {
   const [signup, setSignup] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const { login, register } = useApp();
+  const { user, login, register } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = pendingInvite(location.state?.from) || getPendingInvite();
@@ -35,10 +35,14 @@ export default function Login() {
       }
     } catch (failure) {
       setError(failure.message || "Authentication failed. Please try again.");
-    } finally {
       setSubmitting(false);
     }
   }
+
+  if (user && !submitting) {
+    return <Navigate to="/home" replace />;
+  }
+
   return (
     <div className="auth-shell reference-auth">
       <section className="auth-story">
