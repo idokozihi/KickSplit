@@ -94,7 +94,7 @@ test("HTTP and network failures reject creation", async (t) => {
   const fetchMock = t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 500 }));
   await assert.rejects(createGame(input), /Could not create game \(500\)/);
   fetchMock.mock.mockImplementation(async () => { throw new TypeError("Failed to fetch"); });
-  await assert.rejects(createGame(input), /Failed to fetch/);
+  await assert.rejects(createGame(input), /Could not connect to KickSplit/);
 });
 
 test("deleting a game sends the game and current user IDs", async (t) => {

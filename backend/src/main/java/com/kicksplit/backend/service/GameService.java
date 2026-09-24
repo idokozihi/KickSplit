@@ -66,13 +66,30 @@ public class GameService {
         this.teamRegenerationVoteRepository = teamRegenerationVoteRepository;
     }
 
+    @Transactional
     public Game createGame(CreateGameRequest request) {
 
+        if (request.getGroupId() == null || request.getUserId() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Group and current user are required.");
+        }
+
         Group group = groupRepository.findById(request.getGroupId())
-                .orElseThrow(() -> new RuntimeException("Group not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Group not found."));
 
         User creator = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found."));
+
+        groupMemberRepository
+                .findByUser_IdAndGroup_Id(creator.getId(), group.getId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Only group members can create games."));
 
         int targetPlayers = request.getTargetPlayers() > 0
                 ? request.getTargetPlayers()
@@ -129,7 +146,10 @@ public class GameService {
         }
 
         voteRepository.deleteByGame_Id(gameId);
+        voteRepository.flush();
+
         teamRegenerationVoteRepository.deleteByGame_Id(gameId);
+        teamRegenerationVoteRepository.flush();
 
         List<StoredTeamProposal> proposals =
                 storedTeamProposalRepository
@@ -140,14 +160,20 @@ public class GameService {
                     .deleteByProposal_Id(proposal.getId());
         }
 
+        storedProposalPlayerRepository.flush();
+
         storedTeamProposalRepository.deleteAll(proposals);
+        storedTeamProposalRepository.flush();
 
         guestRepository.deleteAll(
                 guestRepository.findByGame_Id(gameId));
+        guestRepository.flush();
 
         registrationRepository.deleteAll(
                 registrationRepository.findByGame_Id(gameId));
+        registrationRepository.flush();
 
         gameRepository.delete(game);
+        gameRepository.flush();
     }
 }

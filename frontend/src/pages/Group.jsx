@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useApp } from "../state/context";
 import { participantCount, proposedDate, rankedDays } from "../state/mock";
-import { loadGroup, loadGroupMembers, loadInviteToken, removeGroupMember, saveGroupPermissions, saveRatingSource, saveTeamColors, updateSelfRating } from "../state/groupsApi";
+import { findGroupMember, loadGroup, loadGroupMembers, loadInviteToken, removeGroupMember, saveGroupPermissions, saveRatingSource, saveTeamColors, updateSelfRating } from "../state/groupsApi";
 import { inviteUrl } from "../state/invite";
 import { Avatar, BackLink, EmptyState, GroupImage, Icon, Modal, Section } from "../components/UI";
 import { RatingFields } from "../components/Forms";
@@ -63,22 +63,36 @@ export default function Group() {
   useEffect(() => {
     if (!hasGroup) return;
     const controller = new AbortController();
-    Promise.all([loadGroup(groupId, controller.signal), loadGroupMembers(groupId, controller.signal)])
-      .then(([loadedGroup, members]) => {
-        if (!controller.signal.aborted) {
-          setDetails({ key: detailsKey, group: loadedGroup, members });
-          updateGroupDetails(loadedGroup);
-        }
+    loadGroup(groupId, controller.signal)
+      .then((loadedGroup) => {
+        if (controller.signal.aborted) return;
+        setDetails((previous) => previous?.key === detailsKey
+          ? { ...previous, group: loadedGroup, groupLoaded: true }
+          : { key: detailsKey, group: loadedGroup, groupLoaded: true });
+        updateGroupDetails(loadedGroup);
       })
       .catch((error) => {
-        if (!controller.signal.aborted) setDetails({ key: detailsKey, error: error.message || "Could not load group details." });
+        if (!controller.signal.aborted) setDetails((previous) => previous?.key === detailsKey
+          ? { ...previous, groupLoaded: true, groupError: error.message || "Could not load group details." }
+          : { key: detailsKey, groupLoaded: true, groupError: error.message || "Could not load group details." });
+      });
+    loadGroupMembers(groupId, controller.signal)
+      .then((members) => {
+        if (!controller.signal.aborted) setDetails((previous) => previous?.key === detailsKey
+          ? { ...previous, members, membersLoaded: true }
+          : { key: detailsKey, members, membersLoaded: true });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setDetails((previous) => previous?.key === detailsKey
+          ? { ...previous, membersLoaded: true, membersError: error.message || "Could not load group members." }
+          : { key: detailsKey, membersLoaded: true, membersError: error.message || "Could not load group members." });
       });
     return () => controller.abort();
   }, [groupId, user.id, hasGroup, detailsKey, updateGroupDetails]);
 
   const currentDetails = details?.key === detailsKey ? details : null;
   const members = currentDetails?.members;
-  const currentMember = members?.find((member) => String(member.userId) === String(user.id));
+  const currentMember = findGroupMember(members, user.id);
   const ratingSource = currentDetails?.group?.ratingSource || group?.ratingSource;
   const teamColors = groupTeamColors(currentDetails?.group || group);
   const savedPermissions = permissionsFromGroup(currentDetails?.group || group);
@@ -193,7 +207,7 @@ export default function Group() {
       const saved = await updateSelfRating(groupId, user.id, ratings);
       setDetails((previous) => previous?.key === detailsKey ? {
         ...previous,
-        members: previous.members.map((member) => String(member.userId) === String(user.id) ? saved : member),
+        members: previous.members?.map((member) => String(member.userId) === String(user.id) ? saved : member),
       } : previous);
       setRatings(null);
     } catch (failure) {
@@ -216,7 +230,7 @@ export default function Group() {
       await removeGroupMember(groupId, memberToRemove.userId, user.id);
       setDetails((previous) => previous?.key === detailsKey ? {
         ...previous,
-        members: previous.members.filter((member) => String(member.userId) !== String(memberToRemove.userId)),
+        members: previous.members?.filter((member) => String(member.userId) !== String(memberToRemove.userId)),
       } : previous);
       setMemberToRemove(null);
     } catch (failure) {
@@ -261,7 +275,7 @@ export default function Group() {
         <h1><bdi>{group.name}</bdi></h1>
         <span className="group-member-count"><Icon name="groups" size={17} />
           {members ? `${members.length} ${members.length === 1 ? "member" : "members"}`
-            : currentDetails?.error ? "Members unavailable" : "Members loading"}</span>
+            : currentDetails?.membersError ? "Members unavailable" : "Members loading"}</span>
         {group.description && <p>{group.description}</p>}
       </div>
       <div className="group-actions">
@@ -281,8 +295,8 @@ export default function Group() {
           </Link>}
         </Section>
         <details className="collapsible-section group-summary"><summary><span className="summary-copy"><Icon name="groups" size={18} /><strong>Members {members ? `(${members.length})` : ""}</strong></span><span className="summary-avatars">{members?.slice(0, 4).map((member) => <Avatar key={member.userId} name={member.name} photo={String(member.userId) === String(user.id) ? user.photo : member.imageUrl} />)}{members?.length > 4 && <small>+{members.length - 4}</small>}</span><span className="summary-chevron">›</span></summary>
-          {!currentDetails && <p className="muted" role="status">Loading members...</p>}
-          {currentDetails?.error && <><p className="error" role="alert">{currentDetails.error}</p>
+          {!currentDetails?.membersLoaded && <p className="muted" role="status">Loading members...</p>}
+          {currentDetails?.membersError && <><p className="error" role="alert">{currentDetails.membersError}</p>
             <button className="button secondary" onClick={() => setDetailsRetry((value) => value + 1)}>Retry</button></>}
           {members && <div className="player-grid">
             {members.map((member) => <article className="player-card" key={member.userId}>
@@ -313,7 +327,7 @@ export default function Group() {
                 <span>Wins <b>{statText(currentMember.totalWins)}</b></span>
                 <span>Win rate <b>{percentageText(currentMember.winRate)}</b></span>
               </div>
-            </> : <p className="form-hint">{currentDetails ? "Your stats are unavailable." : "Loading your stats..."}</p>}
+            </> : <p className="form-hint">{currentDetails?.membersLoaded ? "Your stats are unavailable." : "Loading your stats..."}</p>}
             <p className="form-hint">Your self-ratings are separate from the App Rating calculated from recorded results.</p>
             <button className="button secondary full-width" disabled={!currentMember}
               onClick={openRatingEditor}>Edit rating</button>
@@ -322,6 +336,7 @@ export default function Group() {
       </aside>
     </div>
     {settingsOpen && <Modal title="Group settings" onClose={() => setSettingsOpen(false)}>
+        {currentDetails?.groupError && <p className="error" role="alert">Some group settings could not be refreshed. Saved values are shown.</p>}
         <Section title="Team colors">
           <p className="form-hint">Choose three different colors for this group.</p>
           <div className="team-color-settings">
@@ -334,7 +349,7 @@ export default function Group() {
               </span>
             </label>)}
           </div>
-          {!currentDetails && <p className="form-hint" role="status">Loading team colors...</p>}
+          {!currentDetails?.groupLoaded && <p className="form-hint" role="status">Loading team colors...</p>}
           {members && !currentMember?.admin && <p className="form-hint">Only group admins can change team colors.</p>}
           {colorSaving && <p className="form-hint" role="status">Saving team colors...</p>}
           {colorError?.key === detailsKey && <p className="error" role="alert">{colorError.message}</p>}
@@ -370,7 +385,7 @@ export default function Group() {
                   }}>{label}</button>)}
               </div>
             </fieldset>)}
-            {!currentDetails && <p className="form-hint" role="status">Loading group permissions...</p>}
+            {!currentDetails?.groupLoaded && <p className="form-hint" role="status">Loading group permissions...</p>}
             {members && !currentMember?.admin && <p className="form-hint">Only group admins can change group permissions.</p>}
             {currentMember?.admin && <button type="button" className="button primary permission-save"
               disabled={permissionSaving} onClick={savePermissions}>{permissionSaving ? "Saving permissions..." : "Save permissions"}</button>}

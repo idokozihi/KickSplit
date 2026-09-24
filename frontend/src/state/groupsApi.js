@@ -93,7 +93,20 @@ export async function loadGroup(groupId, signal) {
 }
 
 export async function loadGroupMembers(groupId, signal) {
-  return request(`/groups/${encodeURIComponent(groupId)}/members`, { signal });
+  const members = await request(`/groups/${encodeURIComponent(groupId)}/members`, { signal });
+  if (!Array.isArray(members)) {
+    throw new Error("The server returned an invalid group member list.");
+  }
+  return members.map((member) => ({
+    ...member,
+    userId: Number(member.userId),
+    admin: member.admin === true,
+  }));
+}
+
+export function findGroupMember(members, userId) {
+  if (!Array.isArray(members) || userId === null || userId === undefined) return undefined;
+  return members.find((member) => String(member.userId) === String(userId));
 }
 
 export function leaveGroup(groupId, userId) {

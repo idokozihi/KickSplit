@@ -3,7 +3,7 @@ import GameResult from "../components/GameResult";
 import TeamProposals from "./TeamProposals";
 import { useEffect, useState } from "react";
 import { loadGame } from "../state/gamesApi";
-import { loadGroupMembers } from "../state/groupsApi";
+import { findGroupMember, loadGroupMembers } from "../state/groupsApi";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApp } from "../state/context";
 import { goingPlayers, dayGame, gameDays, createMockId } from "../state/mock";
@@ -26,6 +26,7 @@ export default function Game() {
   const [deletingGame, setDeletingGame] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleteAccess, setDeleteAccess] = useState(null);
+  const [deleteAccessRetry, setDeleteAccessRetry] = useState(0);
   const [tab, setTab] = useState("lineup");
   const [resultEpoch, setResultEpoch] = useState(0);
   const [error, setError] = useState("");
@@ -84,19 +85,22 @@ export default function Game() {
   }, [backendGameId, guestKey, refreshGuests]);
   const guestError = guestResult?.key === guestKey ? guestResult.error : "";
   const guestsLoading = Boolean(backendGameId) && guestResult?.key !== guestKey;
-  const deleteAccessKey = source ? `${source.groupId}:${user.id}` : "";
+  const deleteAccessKey = source ? `${source.groupId}:${user.id}:${deleteAccessRetry}` : "";
   useEffect(() => {
     if (!source?.backendBacked) return;
     const controller = new AbortController();
     loadGroupMembers(source.groupId, controller.signal)
       .then((members) => {
         if (!controller.signal.aborted) {
-          const membership = members.find((member) => String(member.userId) === String(user.id));
+          const membership = findGroupMember(members, user.id);
           setDeleteAccess({ key: deleteAccessKey, admin: Boolean(membership?.admin) });
         }
       })
-      .catch(() => {
-        if (!controller.signal.aborted) setDeleteAccess({ key: deleteAccessKey, admin: false });
+      .catch((error) => {
+        if (!controller.signal.aborted) setDeleteAccess({
+          key: deleteAccessKey,
+          error: error.message || "Could not verify game management access.",
+        });
       });
     return () => controller.abort();
   }, [source?.backendBacked, source?.groupId, user.id, deleteAccessKey]);
@@ -116,7 +120,7 @@ export default function Game() {
     || { id: game.groupId, name: game.groupName || "Your group" };
   const going = goingPlayers(game, user);
   const date = new Date(game.date.includes("T") ? game.date : `${game.date}T00:00:00`);
-  const createdByCurrentUser = game.createdByUserId !== null
+  const createdByCurrentUser = game.createdByUserId !== null && game.createdByUserId !== undefined
     && String(game.createdByUserId) === String(user.id);
   const canDeleteGame = Boolean(game.backendBacked
     && (createdByCurrentUser || (deleteAccess?.key === deleteAccessKey && deleteAccess.admin)));
@@ -189,6 +193,12 @@ export default function Game() {
       <div className="app-tabs" role="group" aria-label="Game sections">
         {[["lineup", "Lineup"], ["teams", "Teams"], ["info", "Info"]].map(([value, label]) => <button key={value} aria-pressed={tab === value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}>{label}</button>)}
       </div>
+      {canDeleteGame && <div className="game-page-management">
+        <button type="button" className="button destructive" onClick={() => {
+          setDeleteError("");
+          setConfirmingDelete(true);
+        }}>Delete game</button>
+      </div>}
       {tab === "info" && <>
       <div className="game-details">
         <div>
@@ -227,12 +237,9 @@ export default function Game() {
         </div>
       </div>
       <p className="game-info-group">Group: <Link className="text-link" to={`/groups/${group.id}`}>{group.name}</Link></p>
-      {canDeleteGame && <div className="danger-zone game-danger-zone">
-        <div><strong>Delete game</strong><p>This removes the game for everyone in the group.</p></div>
-        <button type="button" className="button destructive" onClick={() => {
-          setDeleteError("");
-          setConfirmingDelete(true);
-        }}>Delete game</button>
+      {deleteAccess?.key === deleteAccessKey && deleteAccess.error && !createdByCurrentUser && <div className="panel game-access-error">
+        <p className="error" role="alert">{deleteAccess.error}</p>
+        <button type="button" className="button secondary" onClick={() => setDeleteAccessRetry((value) => value + 1)}>Retry access check</button>
       </div>}
       </>}
       {tab === "lineup" && <>

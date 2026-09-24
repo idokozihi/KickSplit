@@ -832,6 +832,9 @@ svg {
 .danger-zone p { margin-top: 3px; color: #876961; font-size: 11px; line-height: 1.4; }
 .danger-zone .button { flex: none; }
 .game-danger-zone { margin-bottom: 28px; }
+.game-page-management { display: flex; justify-content: flex-end; margin: -2px 0 14px; }
+.game-page-management .button { min-height: 36px; }
+.game-access-error { margin-bottom: 24px; }
 .confirmation-copy { display: grid; gap: 8px; margin-bottom: 18px; line-height: 1.5; }
 .modal-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 9px; margin-top: 20px; }
 .result-card { margin-top: 26px; background: white; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
