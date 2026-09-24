@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useApp } from "../state/context";
 import { participantCount, proposedDate, rankedDays } from "../state/mock";
-import { loadGroup, loadGroupMembers, loadInviteToken, saveGroupPermissions, saveRatingSource, saveTeamColors } from "../state/groupsApi";
+import { loadGroup, loadGroupMembers, loadInviteToken, removeGroupMember, saveGroupPermissions, saveRatingSource, saveTeamColors, updateSelfRating } from "../state/groupsApi";
 import { inviteUrl } from "../state/invite";
 import { Avatar, BackLink, EmptyState, GroupImage, Icon, Modal, Section } from "../components/UI";
 import { RatingFields } from "../components/Forms";
@@ -15,6 +15,8 @@ const percentageText = (value) => `${Math.round((Number.isFinite(value) ? value 
 const statText = (value) => Number.isFinite(value) ? value : 0;
 const selfRatingText = (value) => Number.isFinite(value) ? value : "—";
 
+const editableRating = (value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 5 ? Number(value) : 3;
+
 const permissionSettings = [
   { key: "teamGenerationPermission", label: "Generate teams", options: [["ADMINS_ONLY", "Admins only"], ["PLAYERS", "Players"]] },
   { key: "teamRegenerationMode", label: "Regenerate teams", options: [["ADMINS_ONLY", "Admins only"], ["PLAYER_VOTE", "Player vote"]] },
@@ -23,10 +25,19 @@ const permissionSettings = [
 
 export default function Group() {
   const { groupId } = useParams();
-  const { groups, groupsLoading, groupsError, games, user, updateRatings, updateGroupDetails } = useApp();
+  const navigate = useNavigate();
+  const { groups, groupsLoading, groupsError, games, user, leaveGroup, updateGroupDetails } = useApp();
   const group = groups.find((item) => item.id === groupId);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [ratings, setRatings] = useState(null);
+  const [ratingSaving, setRatingSaving] = useState(false);
+  const [ratingError, setRatingError] = useState("");
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState("");
+  const [memberToRemove, setMemberToRemove] = useState(null);
+  const [memberRemoving, setMemberRemoving] = useState(false);
+  const [memberError, setMemberError] = useState("");
   const [inviting, setInviting] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
@@ -163,6 +174,78 @@ export default function Group() {
     }
   }
 
+  function openRatingEditor() {
+    if (!currentMember) return;
+    setRatingError("");
+    setRatings({
+      overall: editableRating(currentMember.selfOverallRating),
+      attack: editableRating(currentMember.selfAttackRating),
+      defense: editableRating(currentMember.selfDefenseRating),
+    });
+  }
+
+  async function saveRatings(event) {
+    event.preventDefault();
+    if (ratingSaving || !ratings) return;
+    setRatingSaving(true);
+    setRatingError("");
+    try {
+      const saved = await updateSelfRating(groupId, user.id, ratings);
+      setDetails((previous) => previous?.key === detailsKey ? {
+        ...previous,
+        members: previous.members.map((member) => String(member.userId) === String(user.id) ? saved : member),
+      } : previous);
+      setRatings(null);
+    } catch (failure) {
+      setRatingError(failure.message || "Could not save your ratings. Please try again.");
+    } finally {
+      setRatingSaving(false);
+    }
+  }
+
+  function confirmMemberRemoval(member) {
+    setMemberError("");
+    setMemberToRemove(member);
+  }
+
+  async function removeMember() {
+    if (!memberToRemove || memberRemoving || !currentMember?.admin) return;
+    setMemberRemoving(true);
+    setMemberError("");
+    try {
+      await removeGroupMember(groupId, memberToRemove.userId, user.id);
+      setDetails((previous) => previous?.key === detailsKey ? {
+        ...previous,
+        members: previous.members.filter((member) => String(member.userId) !== String(memberToRemove.userId)),
+      } : previous);
+      setMemberToRemove(null);
+    } catch (failure) {
+      setMemberError(failure.message || "Could not remove this member. Please try again.");
+    } finally {
+      setMemberRemoving(false);
+    }
+  }
+
+  function confirmLeave() {
+    setSettingsOpen(false);
+    setLeaveError("");
+    setConfirmingLeave(true);
+  }
+
+  async function leaveCurrentGroup() {
+    if (leaving) return;
+    setLeaving(true);
+    setLeaveError("");
+    try {
+      await leaveGroup(groupId);
+      navigate("/groups", { replace: true });
+    } catch (failure) {
+      setLeaveError(failure.message || "Could not leave this group. Please try again.");
+    } finally {
+      setLeaving(false);
+    }
+  }
+
   if (!group && groupsLoading) return <EmptyState title="Loading group..." />;
   if (!group && groupsError) return <EmptyState title="Could not load group" description={groupsError} to="/groups" action="Your groups" />;
   if (!group) return <EmptyState title="Group not found" description="This group could not be found on the server." to="/groups" action="Your groups" />;
@@ -210,6 +293,8 @@ export default function Group() {
               <div className="player-ratings"><strong>{ratingText(member.appRating)}<small>App Rating</small></strong>
                 <span>Self Rating <b>{selfRatingText(member.selfOverallRating)}</b></span></div>
               <div className="player-stats"><span>Games <b>{statText(member.ratedGames)}</b></span><span>Wins <b>{statText(member.totalWins)}</b></span><span>Win rate <b>{percentageText(member.winRate)}</b></span></div>
+              {currentMember?.admin && String(member.userId) !== String(user.id)
+                && <button type="button" className="member-remove-action" onClick={() => confirmMemberRemoval(member)}>Remove member</button>}
             </article>)}
           </div>}
         </details>
@@ -229,11 +314,9 @@ export default function Group() {
                 <span>Win rate <b>{percentageText(currentMember.winRate)}</b></span>
               </div>
             </> : <p className="form-hint">{currentDetails ? "Your stats are unavailable." : "Loading your stats..."}</p>}
-            <p className="form-hint">{group.detailsUnavailable
-              ? "Self-ratings are saved when you create or join a group. Editing saved ratings is currently unavailable."
-              : "Your self-ratings relative to the players in this group."}</p>
-            <button className="button secondary full-width" disabled={group.detailsUnavailable}
-              onClick={() => setRatings({ ...group.ratings })}>Edit group ratings</button>
+            <p className="form-hint">Your self-ratings are separate from the App Rating calculated from recorded results.</p>
+            <button className="button secondary full-width" disabled={!currentMember}
+              onClick={openRatingEditor}>Edit rating</button>
           </div>
         </details>
       </aside>
@@ -295,6 +378,12 @@ export default function Group() {
             {permissionSaved?.key === detailsKey && <p className="success" role="status">{permissionSaved.message}</p>}
           </div>
         </Section>
+        <Section title="Membership">
+          <div className="danger-zone">
+            <div><strong>Leave group</strong><p>You will lose access to this group's games and chat.</p></div>
+            <button type="button" className="button destructive" onClick={confirmLeave}>Leave group</button>
+          </div>
+        </Section>
     </Modal>}
     {inviting && <Modal title="Invite players" onClose={() => setInviting(false)}>
       {inviteLoading && <p className="muted">Getting invite link...</p>}
@@ -305,11 +394,43 @@ export default function Group() {
       </div>}
       {inviteError && <p className="error" role="alert">{inviteError}</p>}
     </Modal>}
-    {ratings && <Modal title="Your group ratings" onClose={() => setRatings(null)}>
-      <form className="form" onSubmit={(event) => { event.preventDefault(); updateRatings(groupId, ratings); setRatings(null); }}>
-        <RatingFields value={ratings} onChange={setRatings} />
-        <button className="button primary">Save ratings</button>
+    {ratings && <Modal title="Edit your rating" onClose={() => {
+      if (!ratingSaving) setRatings(null);
+    }}>
+      <form className="form" onSubmit={saveRatings}>
+        <RatingFields value={ratings} onChange={setRatings} disabled={ratingSaving} />
+        {ratingError && <p className="error" role="alert">{ratingError}</p>}
+        <div className="modal-actions">
+          <button type="button" className="button secondary" disabled={ratingSaving} onClick={() => setRatings(null)}>Cancel</button>
+          <button className="button primary" disabled={ratingSaving}>{ratingSaving ? "Saving..." : "Save rating"}</button>
+        </div>
       </form>
+    </Modal>}
+    {memberToRemove && <Modal title="Remove member?" onClose={() => {
+      if (!memberRemoving) setMemberToRemove(null);
+    }}>
+      <div className="confirmation-copy">
+        <p>Remove <strong><bdi>{memberToRemove.name}</bdi></strong> from <strong><bdi>{group.name}</bdi></strong>?</p>
+        <p className="form-hint">They will lose access to this group's games and chat.</p>
+      </div>
+      {memberError && <p className="error" role="alert">{memberError}</p>}
+      <div className="modal-actions">
+        <button type="button" className="button secondary" disabled={memberRemoving} onClick={() => setMemberToRemove(null)}>Cancel</button>
+        <button type="button" className="button destructive" disabled={memberRemoving} onClick={removeMember}>{memberRemoving ? "Removing..." : "Remove member"}</button>
+      </div>
+    </Modal>}
+    {confirmingLeave && <Modal title="Leave this group?" onClose={() => {
+      if (!leaving) setConfirmingLeave(false);
+    }}>
+      <div className="confirmation-copy">
+        <p>You will leave <strong><bdi>{group.name}</bdi></strong> and lose access to its games and chat.</p>
+        {currentMember?.admin && <p className="form-hint">If you are the last admin, choose another admin before leaving.</p>}
+      </div>
+      {leaveError && <p className="error" role="alert">{leaveError}</p>}
+      <div className="modal-actions">
+        <button type="button" className="button secondary" disabled={leaving} onClick={() => setConfirmingLeave(false)}>Cancel</button>
+        <button type="button" className="button destructive" disabled={leaving} onClick={leaveCurrentGroup}>{leaving ? "Leaving..." : "Leave group"}</button>
+      </div>
     </Modal>}
   </div>;
 }

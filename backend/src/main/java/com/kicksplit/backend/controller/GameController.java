@@ -13,6 +13,8 @@ import com.kicksplit.backend.entity.Game;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api/games")
@@ -42,5 +44,13 @@ public class GameController {
     public GameResponseDto createGame(@RequestBody CreateGameRequest request) {
         Game game = gameService.createGame(request);
         return GameResponseDto.fromGame(game);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteGame(
+            @PathVariable Long id,
+            @RequestParam Long userId) {
+
+        gameService.deleteGame(id, userId);
     }
 }

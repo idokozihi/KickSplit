@@ -37,6 +37,8 @@ public class GroupMember {
 
     private Integer totalRecordedWins;
 
+    private Double appRatingSeed;
+
     public GroupMember() {
     }
 
@@ -54,6 +56,7 @@ public class GroupMember {
         this.selfOverallRating = selfOverallRating;
         this.selfAttackRating = selfAttackRating;
         this.selfDefenseRating = selfDefenseRating;
+        this.appRatingSeed = (double) selfOverallRating;
     }
 
     public Long getId() {
@@ -109,7 +112,7 @@ public class GroupMember {
     }
 
     public double getAppRating() {
-        return appRating != null ? appRating : selfOverallRating;
+        return appRating != null ? appRating : getAppRatingSeed();
     }
 
     public void setAppRating(double appRating) {
@@ -148,4 +151,17 @@ public class GroupMember {
         return (double) getTotalWins() / getTotalRecordedWins();
     }
 
+    public double getAppRatingSeed() {
+        return appRatingSeed != null
+                ? appRatingSeed
+                : selfOverallRating;
+    }
+
+    public void setAppRatingSeed(double appRatingSeed) {
+        this.appRatingSeed = appRatingSeed;
+    }
+
+    public boolean hasAppRatingSeed() {
+        return appRatingSeed != null;
+    }
 }

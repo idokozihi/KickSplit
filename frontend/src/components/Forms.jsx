@@ -4,7 +4,7 @@ import { useApp } from "../state/context";
 import { processProfileImage } from "../utils/profileImage";
 import { Avatar, GroupImage, Icon, Modal } from "./UI";
 
-export function RatingFields({ value, onChange }) {
+export function RatingFields({ value, onChange, disabled = false }) {
   return (
     <fieldset className="ratings">
       <legend>Your ratings in this group</legend>
@@ -23,6 +23,7 @@ export function RatingFields({ value, onChange }) {
                 aria-label={`${key}: ${number} out of 5`}
                 aria-pressed={value[key] === number}
                 className={value[key] === number ? "selected" : ""}
+                disabled={disabled}
                 onClick={() => onChange({ ...value, [key]: number })}
               >
                 {number}

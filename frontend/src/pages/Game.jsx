@@ -3,7 +3,8 @@ import GameResult from "../components/GameResult";
 import TeamProposals from "./TeamProposals";
 import { useEffect, useState } from "react";
 import { loadGame } from "../state/gamesApi";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { loadGroupMembers } from "../state/groupsApi";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApp } from "../state/context";
 import { goingPlayers, dayGame, gameDays, createMockId } from "../state/mock";
 import {
@@ -18,8 +19,13 @@ import {
 export default function Game() {
   const { gameId } = useParams();
   const [search] = useSearchParams();
-  const { games, groups, user, updateGame, cacheGame, refreshRegistrations, refreshGuests, addBackendGuest } = useApp();
+  const navigate = useNavigate();
+  const { games, groups, user, updateGame, deleteGame, cacheGame, refreshRegistrations, refreshGuests, addBackendGuest } = useApp();
   const [addingGuest, setAddingGuest] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletingGame, setDeletingGame] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteAccess, setDeleteAccess] = useState(null);
   const [tab, setTab] = useState("lineup");
   const [resultEpoch, setResultEpoch] = useState(0);
   const [error, setError] = useState("");
@@ -78,6 +84,22 @@ export default function Game() {
   }, [backendGameId, guestKey, refreshGuests]);
   const guestError = guestResult?.key === guestKey ? guestResult.error : "";
   const guestsLoading = Boolean(backendGameId) && guestResult?.key !== guestKey;
+  const deleteAccessKey = source ? `${source.groupId}:${user.id}` : "";
+  useEffect(() => {
+    if (!source?.backendBacked) return;
+    const controller = new AbortController();
+    loadGroupMembers(source.groupId, controller.signal)
+      .then((members) => {
+        if (!controller.signal.aborted) {
+          const membership = members.find((member) => String(member.userId) === String(user.id));
+          setDeleteAccess({ key: deleteAccessKey, admin: Boolean(membership?.admin) });
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setDeleteAccess({ key: deleteAccessKey, admin: false });
+      });
+    return () => controller.abort();
+  }, [source?.backendBacked, source?.groupId, user.id, deleteAccessKey]);
   if (!source && loadError?.id !== gameId)
     return <EmptyState title="Loading game..." />;
   if (!source)
@@ -94,6 +116,23 @@ export default function Game() {
     || { id: game.groupId, name: game.groupName || "Your group" };
   const going = goingPlayers(game, user);
   const date = new Date(game.date.includes("T") ? game.date : `${game.date}T00:00:00`);
+  const createdByCurrentUser = game.createdByUserId !== null
+    && String(game.createdByUserId) === String(user.id);
+  const canDeleteGame = Boolean(game.backendBacked
+    && (createdByCurrentUser || (deleteAccess?.key === deleteAccessKey && deleteAccess.admin)));
+  async function deleteCurrentGame() {
+    if (deletingGame || !canDeleteGame) return;
+    setDeletingGame(true);
+    setDeleteError("");
+    try {
+      await deleteGame(gameId);
+      navigate("/games", { replace: true });
+    } catch (failure) {
+      setDeleteError(failure.message || "Could not delete this game. Please try again.");
+    } finally {
+      setDeletingGame(false);
+    }
+  }
   async function addGuest(event) {
     event.preventDefault();
     if (savingGuest || guestsLoading) return;
@@ -188,6 +227,13 @@ export default function Game() {
         </div>
       </div>
       <p className="game-info-group">Group: <Link className="text-link" to={`/groups/${group.id}`}>{group.name}</Link></p>
+      {canDeleteGame && <div className="danger-zone game-danger-zone">
+        <div><strong>Delete game</strong><p>This removes the game for everyone in the group.</p></div>
+        <button type="button" className="button destructive" onClick={() => {
+          setDeleteError("");
+          setConfirmingDelete(true);
+        }}>Delete game</button>
+      </div>}
       </>}
       {tab === "lineup" && <>
       <div className="game-lineup-layout">
@@ -306,6 +352,19 @@ export default function Game() {
           </form>
         </Modal>
       )}
+      {confirmingDelete && <Modal title="Delete this game?" onClose={() => {
+        if (!deletingGame) setConfirmingDelete(false);
+      }}>
+        <div className="confirmation-copy">
+          <p>This will permanently remove <strong><bdi>{game.title}</bdi></strong> from the group.</p>
+          <p className="form-hint">Games with a recorded result cannot be deleted.</p>
+        </div>
+        {deleteError && <p className="error" role="alert">{deleteError}</p>}
+        <div className="modal-actions">
+          <button type="button" className="button secondary" disabled={deletingGame} onClick={() => setConfirmingDelete(false)}>Cancel</button>
+          <button type="button" className="button destructive" disabled={deletingGame} onClick={deleteCurrentGame}>{deletingGame ? "Deleting..." : "Delete game"}</button>
+        </div>
+      </Modal>}
     </div>
   );
 }

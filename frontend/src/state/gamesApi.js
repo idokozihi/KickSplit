@@ -1,11 +1,12 @@
 import { apiUrl } from "./apiBase.js";
 
-export async function createGame({ groupId, title, date, target }) {
+export async function createGame({ groupId, userId, title, date, target }) {
   const response = await fetch(apiUrl("/games"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       groupId: Number(groupId),
+      userId: Number(userId),
       name: title,
       date,
       time: null,
@@ -16,6 +17,22 @@ export async function createGame({ groupId, title, date, target }) {
     throw new Error(`Could not create game (${response.status}). Please try again.`);
   }
   return mapGame(await response.json());
+}
+
+export async function deleteGame(gameId, userId) {
+  const response = await fetch(apiUrl(`/games/${encodeURIComponent(gameId)}?userId=${encodeURIComponent(userId)}`), {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const message = await responseMessage(response);
+    if (response.status === 409) {
+      throw new Error("This game cannot be deleted because it already has a recorded result.");
+    }
+    if (response.status === 403) {
+      throw new Error(message || "Only a group admin or the game creator can delete this game.");
+    }
+    throw new Error(message || `Could not delete game (${response.status}). Please try again.`);
+  }
 }
 
 export async function loadGame(id, signal) {
@@ -49,8 +66,18 @@ function mapGame(dto) {
     date: dto.date,
     time: dto.time,
     target: dto.targetPlayers,
+    createdByUserId: dto.createdByUserId ?? null,
     rsvp: null,
     participants: [],
     guests: [],
   };
+}
+
+async function responseMessage(response) {
+  try {
+    const body = await response.json();
+    return body?.message || body?.detail || "";
+  } catch {
+    return "";
+  }
 }

@@ -44,7 +44,7 @@ public class RatingRecalculationService {
         Map<Long, GroupMember> membersByUserId = new HashMap<>();
 
         for (GroupMember member : members) {
-            member.setAppRating(member.getSelfOverallRating());
+            member.setAppRating(member.getAppRatingSeed());
             member.setRatedGames(0);
             member.setTotalWins(0);
             member.setTotalRecordedWins(0);

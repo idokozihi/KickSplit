@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createGame, loadGame, loadGroupGames, mergeGames } from "./gamesApi.js";
+import { createGame, deleteGame, loadGame, loadGroupGames, mergeGames } from "./gamesApi.js";
 import { gameDays, dayGame } from "./mock.js";
 
 test("group games load through the existing mapping and merge without losing existing state", async (t) => {
@@ -10,7 +10,7 @@ test("group games load through the existing mapping and merge without losing exi
     assert.equal(options.signal, signal);
     return { ok: true, json: async () => [{
       id: 42, groupId: 7, groupName: "Friday FC", name: "Football",
-      date: "2026-09-18", time: null, targetPlayers: 15,
+      date: "2026-09-18", time: null, targetPlayers: 15, createdByUserId: 7,
     }] };
   });
   const loaded = await loadGroupGames("7", signal);
@@ -18,6 +18,7 @@ test("group games load through the existing mapping and merge without losing exi
   assert.equal(loaded[0].groupId, "7");
   assert.equal(loaded[0].backendBacked, true);
   assert.equal(loaded[0].title, "Football");
+  assert.equal(loaded[0].createdByUserId, 7);
   const existing = { ...loaded[0], rsvp: "GOING" };
   const created = { ...existing, id: "43" };
   const merged = mergeGames([existing, created], [...loaded, ...loaded]);
@@ -51,6 +52,7 @@ test("loading an individual game uses its ID and maps the backend response", asy
   assert.equal(game.title, "Football");
   assert.equal(game.target, 15);
   assert.equal(game.time, null);
+  assert.equal(game.createdByUserId, null);
   assert.equal(dayGame(game).date, "2026-09-18");
 });
 
@@ -69,27 +71,42 @@ test("creation sends the exact API contract and maps the response for existing v
     assert.equal(options.method, "POST");
     assert.equal(options.headers["Content-Type"], "application/json");
     assert.deepEqual(JSON.parse(options.body), {
-      groupId: 7, name: "Football", date: "2026-09-18", time: null, targetPlayers: 15,
+      groupId: 7, userId: 9, name: "Football", date: "2026-09-18", time: null, targetPlayers: 15,
     });
     return { ok: true, json: async () => ({
       id: 42, groupId: 7, groupName: "Friday FC", name: "Saved football",
-      date: "2026-09-19", time: null, targetPlayers: 12,
+      date: "2026-09-19", time: null, targetPlayers: 12, createdByUserId: 9,
     }) };
   });
-  const game = await createGame({ groupId: "7", title: "Football", date: "2026-09-18", target: 15 });
+  const game = await createGame({ groupId: "7", userId: "9", title: "Football", date: "2026-09-18", target: 15 });
   assert.equal(game.id, "42");
   assert.equal(game.groupId, "7");
   assert.equal(game.title, "Saved football");
   assert.equal(game.target, 12);
   assert.equal(game.date, "2026-09-19");
+  assert.equal(game.createdByUserId, 9);
   assert.deepEqual(gameDays(game)[0].availability, {});
   assert.equal(dayGame(game).date, "2026-09-19");
 });
 
 test("HTTP and network failures reject creation", async (t) => {
-  const input = { groupId: "7", title: "Football", date: "2026-09-18", target: 15 };
+  const input = { groupId: "7", userId: "9", title: "Football", date: "2026-09-18", target: 15 };
   const fetchMock = t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 500 }));
   await assert.rejects(createGame(input), /Could not create game \(500\)/);
   fetchMock.mock.mockImplementation(async () => { throw new TypeError("Failed to fetch"); });
   await assert.rejects(createGame(input), /Failed to fetch/);
+});
+
+test("deleting a game sends the game and current user IDs", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/games/42?userId=9");
+    assert.equal(options.method, "DELETE");
+    return { ok: true };
+  });
+  await deleteGame("42", "9");
+});
+
+test("game deletion explains recorded-result conflicts", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 409, json: async () => ({}) }));
+  await assert.rejects(deleteGame(42, 9), /recorded result/);
 });

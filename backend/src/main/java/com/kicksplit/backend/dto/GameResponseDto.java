@@ -10,6 +10,7 @@ public class GameResponseDto {
     private Long id;
     private Long groupId;
     private String groupName;
+    private Long createdByUserId;
 
     private String name;
     private LocalDate date;
@@ -20,6 +21,7 @@ public class GameResponseDto {
             Long id,
             Long groupId,
             String groupName,
+            Long createdByUserId,
             String name,
             LocalDate date,
             LocalTime time,
@@ -28,6 +30,7 @@ public class GameResponseDto {
         this.id = id;
         this.groupId = groupId;
         this.groupName = groupName;
+        this.createdByUserId = createdByUserId;
         this.name = name;
         this.date = date;
         this.time = time;
@@ -39,6 +42,9 @@ public class GameResponseDto {
                 game.getId(),
                 game.getGroup().getId(),
                 game.getGroup().getName(),
+                game.getCreatedBy() != null
+                        ? game.getCreatedBy().getId()
+                        : null,
                 game.getName(),
                 game.getDate(),
                 game.getTime(),
@@ -55,6 +61,10 @@ public class GameResponseDto {
 
     public String getGroupName() {
         return groupName;
+    }
+
+    public Long getCreatedByUserId() {
+        return createdByUserId;
     }
 
     public String getName() {

@@ -2,7 +2,7 @@ import { apiUrl } from "./apiBase.js";
 import { colorsFromGroupDto, validTeamColors } from "./teamColors.js";
 import { permissionsFromGroup } from "./groupPermissions.js";
 
-async function request(path, options = {}) {
+async function request(path, options = {}, { emptyResponse = false } = {}) {
   let response;
   try {
     response = await fetch(apiUrl(path), options);
@@ -10,6 +10,22 @@ async function request(path, options = {}) {
     throw new Error("Could not connect to KickSplit. Please try again.");
   }
   if (!response.ok) {
+    if (path.includes("/leave?")) {
+      const message = await responseMessage(response);
+      if (response.status === 409) throw new Error("The last admin cannot leave the group. Make another member an admin first.");
+      throw new Error(message || "Could not leave this group. Please try again.");
+    }
+    if (/\/members\/[^/?]+\?adminUserId=/.test(path)) {
+      const message = await responseMessage(response);
+      if (response.status === 403) throw new Error(message || "Only group admins can remove members.");
+      if (response.status === 409) throw new Error("The group's last admin cannot be removed. Make another member an admin first.");
+      throw new Error(message || "Could not remove this member. Please try again.");
+    }
+    if (path.endsWith("/self-rating")) {
+      const message = await responseMessage(response);
+      if (response.status === 400) throw new Error(message || "Ratings must be whole numbers from 1 to 5.");
+      throw new Error(message || "Could not save your ratings. Please try again.");
+    }
     if (path.endsWith("/rating-source") && response.status === 403) {
       throw new Error("Only group admins can change the team balancing rating.");
     }
@@ -30,7 +46,16 @@ async function request(path, options = {}) {
     }
     throw new Error(`Could not ${["POST", "PATCH"].includes(options.method) ? "save" : "load"} group data (${response.status}). Please try again.`);
   }
-  return response.json();
+  return emptyResponse ? null : response.json();
+}
+
+async function responseMessage(response) {
+  try {
+    const body = await response.json();
+    return body?.message || body?.detail || "";
+  } catch {
+    return "";
+  }
 }
 
 function post(path, body) {
@@ -69,6 +94,31 @@ export async function loadGroup(groupId, signal) {
 
 export async function loadGroupMembers(groupId, signal) {
   return request(`/groups/${encodeURIComponent(groupId)}/members`, { signal });
+}
+
+export function leaveGroup(groupId, userId) {
+  return request(`/groups/${encodeURIComponent(groupId)}/leave?userId=${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  }, { emptyResponse: true });
+}
+
+export function removeGroupMember(groupId, targetUserId, adminUserId) {
+  return request(`/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(targetUserId)}?adminUserId=${encodeURIComponent(adminUserId)}`, {
+    method: "DELETE",
+  }, { emptyResponse: true });
+}
+
+export function updateSelfRating(groupId, userId, ratings) {
+  return request(`/groups/${encodeURIComponent(groupId)}/self-rating`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId: Number(userId),
+      selfOverallRating: Number(ratings.overall),
+      selfAttackRating: Number(ratings.attack),
+      selfDefenseRating: Number(ratings.defense),
+    }),
+  });
 }
 
 export async function saveRatingSource(groupId, userId, ratingSource) {

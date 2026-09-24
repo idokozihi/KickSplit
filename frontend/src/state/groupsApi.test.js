@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadGroup, loadGroupMembers, loadGroups, loadInviteToken, mapGroup, saveGroup, saveGroupPermissions, saveRatingSource, saveTeamColors } from "./groupsApi.js";
+import { leaveGroup, loadGroup, loadGroupMembers, loadGroups, loadInviteToken, mapGroup, removeGroupMember, saveGroup, saveGroupPermissions, saveRatingSource, saveTeamColors, updateSelfRating } from "./groupsApi.js";
 
 test("group detail and members load from their endpoints", async (t) => {
   const calls = [];
@@ -23,6 +23,44 @@ test("group detail and members load from their endpoints", async (t) => {
     { url: "/api/groups/42", signal },
     { url: "/api/groups/42/members", signal },
   ]);
+});
+
+test("leaving a group sends the group and current user IDs", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/groups/42/leave?userId=7");
+    assert.equal(options.method, "DELETE");
+    return { ok: true };
+  });
+  await leaveGroup("42", "7");
+});
+
+test("admin removal sends the target member and current admin IDs", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/groups/42/members/11?adminUserId=7");
+    assert.equal(options.method, "DELETE");
+    return { ok: true };
+  });
+  await removeGroupMember("42", "11", "7");
+});
+
+test("self-rating save PATCHes only the logged-in member's ratings", async (t) => {
+  const saved = { userId: 7, selfOverallRating: 5, selfAttackRating: 4, selfDefenseRating: 3 };
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/groups/42/self-rating");
+    assert.equal(options.method, "PATCH");
+    assert.equal(options.headers["Content-Type"], "application/json");
+    assert.deepEqual(JSON.parse(options.body), saved);
+    return { ok: true, json: async () => saved };
+  });
+  assert.deepEqual(await updateSelfRating("42", "7", { overall: 5, attack: 4, defense: 3 }), saved);
+});
+
+test("membership mutation conflicts have clear messages", async (t) => {
+  const fetchMock = t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 409, json: async () => ({}) }));
+  await assert.rejects(leaveGroup(42, 7), /last admin cannot leave/i);
+  await assert.rejects(removeGroupMember(42, 11, 7), /last admin cannot be removed/i);
+  fetchMock.mock.mockImplementation(async () => ({ ok: false, status: 400, json: async () => ({}) }));
+  await assert.rejects(updateSelfRating(42, 7, { overall: 0, attack: 4, defense: 3 }), /1 to 5/);
 });
 
 test("older group responses receive compatible permission defaults", () => {

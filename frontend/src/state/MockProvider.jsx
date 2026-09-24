@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loadGroups, saveGroup, resolveBackendUser } from "./groupsApi";
+import { leaveGroup as leaveBackendGroup, loadGroups, saveGroup, resolveBackendUser } from "./groupsApi";
 import { loadRegistrations, saveRegistration, registrationState } from "./registrationsApi";
-import { createGame, loadGroupGames, mergeGames } from "./gamesApi";
+import { createGame, deleteGame as deleteBackendGame, loadGroupGames, mergeGames } from "./gamesApi";
 import { loadGuests, saveGuest, mergeGuests } from "./guestsApi";
 import { MockContext } from "./context";
 import { initialState, stateForUser, createProposedDay, respondToDay, gameDays } from "./mock";
@@ -114,9 +114,28 @@ export default function MockProvider({ children }) {
       } : group) }));
   }, []);
   const addGame = async (input) => {
-    const game = await createGame(input);
-    setData((current) => ({ ...current, games: mergeGames(current.games, [game]) }));
+    const backendUser = await resolveBackendUser(data.user);
+    const game = await createGame({ ...input, userId: backendUser.id });
+    setData((current) => current.user?.id === backendUser.id
+      ? { ...current, games: mergeGames(current.games, [game]) }
+      : current);
     return game;
+  };
+  const deleteGame = async (gameId) => {
+    const backendUser = await resolveBackendUser(data.user);
+    await deleteBackendGame(gameId, backendUser.id);
+    setData((current) => current.user?.id === backendUser.id
+      ? { ...current, games: current.games.filter((game) => game.id !== String(gameId)) }
+      : current);
+  };
+  const leaveGroup = async (groupId) => {
+    const backendUser = await resolveBackendUser(data.user);
+    await leaveBackendGroup(groupId, backendUser.id);
+    setData((current) => current.user?.id === backendUser.id ? {
+      ...current,
+      groups: current.groups.filter((group) => group.id !== String(groupId)),
+      games: current.games.filter((game) => game.groupId !== String(groupId)),
+    } : current);
   };
   const cacheGame = useCallback((game) => {
     setData((current) => current.games.some((item) => item.id === game.id)
@@ -202,6 +221,8 @@ export default function MockProvider({ children }) {
         updateRatings,
         updateGroupDetails,
         addGame,
+        deleteGame,
+        leaveGroup,
         cacheGame,
         updateGame,
         proposeDay,

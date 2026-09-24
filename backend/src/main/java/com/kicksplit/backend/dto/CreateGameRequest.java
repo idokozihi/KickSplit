@@ -6,6 +6,8 @@ import java.time.LocalTime;
 public class CreateGameRequest {
 
     private Long groupId;
+    private Long userId;
+
     private String name;
     private LocalDate date;
     private LocalTime time;
@@ -20,6 +22,14 @@ public class CreateGameRequest {
 
     public void setGroupId(Long groupId) {
         this.groupId = groupId;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getName() {

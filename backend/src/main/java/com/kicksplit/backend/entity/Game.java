@@ -10,25 +10,24 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import java.time.LocalDate;
-import java.time.LocalTime;
 
 @Entity
 @Table(name = "games")
-
 public class Game {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
     @JoinColumn(name = "group_id")
-
     private Group group;
-    private String name;
 
+    @ManyToOne
+    @JoinColumn(name = "created_by_user_id")
+    private User createdBy;
+
+    private String name;
     private LocalDate date;
     private LocalTime time;
 
@@ -37,8 +36,16 @@ public class Game {
     public Game() {
     }
 
-    public Game(Group group, String name, LocalDate date, LocalTime time, int targetPlayers) {
+    public Game(
+            Group group,
+            User createdBy,
+            String name,
+            LocalDate date,
+            LocalTime time,
+            int targetPlayers) {
+
         this.group = group;
+        this.createdBy = createdBy;
         this.name = name;
         this.date = date;
         this.time = time;
@@ -55,6 +62,22 @@ public class Game {
 
     public void setGroup(Group group) {
         this.group = group;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public LocalDate getDate() {
@@ -79,15 +102,5 @@ public class Game {
 
     public void setTargetPlayers(int targetPlayers) {
         this.targetPlayers = targetPlayers;
-
     }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
 }

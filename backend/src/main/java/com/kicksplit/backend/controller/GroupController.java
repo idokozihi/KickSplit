@@ -20,6 +20,9 @@ import com.kicksplit.backend.dto.UpdateRatingSourceRequest;
 import com.kicksplit.backend.dto.UpdateTeamColorsRequest;
 import com.kicksplit.backend.entity.Group;
 import com.kicksplit.backend.service.GroupService;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import com.kicksplit.backend.dto.UpdateSelfRatingRequest;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -138,5 +141,38 @@ public class GroupController {
                 request.resultEntryPermission());
 
         return GroupResponseDto.fromGroup(group);
+    }
+
+    @DeleteMapping("/{groupId}/leave")
+    public void leaveGroup(
+            @PathVariable Long groupId,
+            @RequestParam Long userId) {
+
+        groupService.leaveGroup(groupId, userId);
+    }
+
+    @DeleteMapping("/{groupId}/members/{targetUserId}")
+    public void removeMember(
+            @PathVariable Long groupId,
+            @PathVariable Long targetUserId,
+            @RequestParam Long adminUserId) {
+
+        groupService.removeMember(
+                groupId,
+                adminUserId,
+                targetUserId);
+    }
+
+    @PatchMapping("/{groupId}/self-rating")
+    public GroupMemberStatsResponseDto updateSelfRating(
+            @PathVariable Long groupId,
+            @RequestBody UpdateSelfRatingRequest request) {
+
+        return groupService.updateSelfRating(
+                groupId,
+                request.userId(),
+                request.selfOverallRating(),
+                request.selfAttackRating(),
+                request.selfDefenseRating());
     }
 }

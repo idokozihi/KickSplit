@@ -130,6 +130,14 @@ svg {
 .secondary:hover {
   background: #f0f5e8;
 }
+.button.destructive {
+  border-color: #9f3f30;
+  background: #a84735;
+  color: white;
+}
+.button.destructive:hover:not(:disabled) {
+  background: #8d3325;
+}
 .full-width {
   width: 100%;
 }
@@ -800,6 +808,8 @@ svg {
 .player-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 13px; border-top: 1px solid var(--line); }
 .player-stats span { color: #7e8b74; font-size: 11px; }
 .player-stats b { display: block; margin-top: 3px; color: #283923; font-size: 14px; }
+.member-remove-action { margin-top: 12px; padding: 5px 0 0; border: 0; border-top: 1px solid var(--line); background: transparent; color: #9a4435; font-size: 11px; font-weight: 700; text-align: left; }
+.member-remove-action:hover { color: #7f2f22; text-decoration: underline; }
 .profile-app-rating { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding: 14px 16px; background: #f7faf2; border-radius: 9px; color: #627553; font-size: 13px; }
 .profile-app-rating strong { color: var(--green); font-size: 27px; }
 .profile-stat-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 18px; margin: 18px 0; }
@@ -816,6 +826,14 @@ svg {
 .permission-options .button { justify-content: center; min-width: 0; padding-inline: 8px; }
 .permission-options .button:disabled { opacity: 1; cursor: default; }
 .permission-save { justify-self: start; }
+.danger-zone { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 15px; border: 1px solid #efd3cc; border-radius: 10px; background: #fff8f6; }
+.danger-zone > div { min-width: 0; }
+.danger-zone strong { color: #76372d; font-size: 13px; }
+.danger-zone p { margin-top: 3px; color: #876961; font-size: 11px; line-height: 1.4; }
+.danger-zone .button { flex: none; }
+.game-danger-zone { margin-bottom: 28px; }
+.confirmation-copy { display: grid; gap: 8px; margin-bottom: 18px; line-height: 1.5; }
+.modal-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 9px; margin-top: 20px; }
 .result-card { margin-top: 26px; background: white; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .result-unavailable { padding: 18px 20px; }
 .result-unavailable .form-hint { margin-top: 5px; }
