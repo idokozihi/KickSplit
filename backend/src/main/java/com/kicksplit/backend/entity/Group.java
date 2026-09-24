@@ -1,5 +1,6 @@
 package com.kicksplit.backend.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -17,7 +18,10 @@ public class Group {
     private Long id;
 
     private String name;
+
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
+
     private String inviteToken;
 
     @Enumerated(EnumType.STRING)

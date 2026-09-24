@@ -466,4 +466,30 @@ public class GroupService {
 
                 return GroupMemberStatsResponseDto.fromMember(saved);
         }
+
+        @Transactional
+        public Group updateGroupImage(
+                        Long groupId,
+                        Long userId,
+                        String imageUrl) {
+
+                Group group = groupRepository.findById(groupId)
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Group not found."));
+
+                groupMemberRepository
+                                .findByUser_IdAndGroup_Id(userId, groupId)
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.FORBIDDEN,
+                                                "User is not a member of this group."));
+
+                if (imageUrl == null || imageUrl.isBlank()) {
+                        group.setImageUrl(null);
+                } else {
+                        group.setImageUrl(imageUrl);
+                }
+
+                return groupRepository.save(group);
+        }
 }

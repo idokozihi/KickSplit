@@ -826,6 +826,11 @@ svg {
 .permission-options .button { justify-content: center; min-width: 0; padding-inline: 8px; }
 .permission-options .button:disabled { opacity: 1; cursor: default; }
 .permission-save { justify-self: start; }
+.group-photo-settings { display: grid; justify-items: center; gap: 12px; padding: 18px; background: #f7faf2; border: 1px solid var(--line); border-radius: 12px; }
+.group-photo-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.group-photo-actions .button, .group-photo-actions .upload-button { min-height: 42px; }
+.group-photo-settings > .form-hint { text-align: center; }
+.group-photo-settings > .error, .group-photo-settings > .success { width: 100%; margin-top: 0; text-align: center; }
 .danger-zone { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 15px; border: 1px solid #efd3cc; border-radius: 10px; background: #fff8f6; }
 .danger-zone > div { min-width: 0; }
 .danger-zone strong { color: #76372d; font-size: 13px; }

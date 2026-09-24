@@ -35,6 +35,10 @@ async function request(path, options = {}, { emptyResponse = false } = {}) {
     if (path.endsWith("/permissions") && response.status === 403) {
       throw new Error("Only group admins can change group permissions.");
     }
+    if (path.endsWith("/image")) {
+      const message = await responseMessage(response);
+      throw new Error(message || `Could not update the group photo (${response.status}). Please try again.`);
+    }
     if (path.startsWith("/groups/join/")) {
       let message = "";
       try { message = (await response.json()).message || ""; } catch { /* Error body may be empty. */ }
@@ -160,6 +164,17 @@ export async function saveGroupPermissions(groupId, userId, permissions) {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userId: Number(userId), ...permissionsFromGroup(permissions) }),
+  });
+  return mapGroup(response);
+}
+
+export async function updateGroupImage(groupId, userId, imageUrl) {
+  const numericUserId = Number(userId);
+  if (!Number.isInteger(numericUserId)) throw new Error("Please log in to continue.");
+  const response = await request(`/groups/${encodeURIComponent(groupId)}/image`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: numericUserId, imageUrl: imageUrl ?? null }),
   });
   return mapGroup(response);
 }

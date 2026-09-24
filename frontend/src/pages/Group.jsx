@@ -9,6 +9,7 @@ import { RatingFields } from "../components/Forms";
 import GroupDateSelector from "../components/GroupDateSelector";
 import { changedTeamColor, groupTeamColors, TEAM_COLOR_OPTIONS } from "../state/teamColors";
 import { permissionsFromGroup } from "../state/groupPermissions";
+import { processGroupImage } from "../utils/profileImage";
 
 const ratingText = (value) => Number.isFinite(value) ? Number(value).toFixed(2) : "—";
 const percentageText = (value) => `${Math.round((Number.isFinite(value) ? value : 0) * 100)}%`;
@@ -26,7 +27,7 @@ const permissionSettings = [
 export default function Group() {
   const { groupId } = useParams();
   const navigate = useNavigate();
-  const { groups, groupsLoading, groupsError, games, user, leaveGroup, updateGroupDetails } = useApp();
+  const { groups, groupsLoading, groupsError, games, user, leaveGroup, updateGroupDetails, updateGroupImage } = useApp();
   const group = groups.find((item) => item.id === groupId);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [ratings, setRatings] = useState(null);
@@ -54,9 +55,14 @@ export default function Group() {
   const [permissionSaving, setPermissionSaving] = useState(false);
   const [permissionError, setPermissionError] = useState(null);
   const [permissionSaved, setPermissionSaved] = useState(null);
+  const [photoProcessing, setPhotoProcessing] = useState(false);
+  const [photoSaving, setPhotoSaving] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [photoSaved, setPhotoSaved] = useState("");
   const colorRequest = useRef(false);
   const sourceRequest = useRef(false);
   const permissionRequest = useRef(false);
+  const photoRequest = useRef(false);
   const detailsKey = `${groupId}:${user.id}:${detailsRetry}`;
   const hasGroup = Boolean(group);
 
@@ -102,7 +108,56 @@ export default function Group() {
     setPermissionDraft(savedPermissions);
     setPermissionError(null);
     setPermissionSaved(null);
+    setPhotoError("");
+    setPhotoSaved("");
     setSettingsOpen(true);
+  }
+
+  async function uploadGroupPhoto(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (photoRequest.current) {
+      input.value = "";
+      return;
+    }
+    photoRequest.current = true;
+    setPhotoProcessing(true);
+    setPhotoError("");
+    setPhotoSaved("");
+    try {
+      const imageUrl = await processGroupImage(file);
+      setPhotoProcessing(false);
+      setPhotoSaving(true);
+      const saved = await updateGroupImage(groupId, imageUrl);
+      setDetails((previous) => previous?.key === detailsKey ? { ...previous, group: saved } : previous);
+      setPhotoSaved("Group photo updated.");
+    } catch (error) {
+      setPhotoError(error.message || "Could not update the group photo. Please try again.");
+    } finally {
+      photoRequest.current = false;
+      setPhotoProcessing(false);
+      setPhotoSaving(false);
+      input.value = "";
+    }
+  }
+
+  async function removeGroupPhoto() {
+    if (photoRequest.current || !group.image) return;
+    photoRequest.current = true;
+    setPhotoSaving(true);
+    setPhotoError("");
+    setPhotoSaved("");
+    try {
+      const saved = await updateGroupImage(groupId, null);
+      setDetails((previous) => previous?.key === detailsKey ? { ...previous, group: saved } : previous);
+      setPhotoSaved("Group photo removed.");
+    } catch (error) {
+      setPhotoError(error.message || "Could not remove the group photo. Please try again.");
+    } finally {
+      photoRequest.current = false;
+      setPhotoSaving(false);
+    }
   }
 
   async function changeTeamColor(index, color) {
@@ -337,6 +392,23 @@ export default function Group() {
     </div>
     {settingsOpen && <Modal title="Group settings" onClose={() => setSettingsOpen(false)}>
         {currentDetails?.groupError && <p className="error" role="alert">Some group settings could not be refreshed. Saved values are shown.</p>}
+        <Section title="Group photo">
+          <div className="group-photo-settings" aria-busy={photoProcessing || photoSaving}>
+            <GroupImage group={group} large />
+            <div className="group-photo-actions">
+              <label className={`upload-button ${photoProcessing || photoSaving ? "disabled" : ""}`}>
+                {photoProcessing ? "Processing photo..." : photoSaving ? "Saving photo..." : "Change photo"}
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadGroupPhoto}
+                  disabled={photoProcessing || photoSaving} />
+              </label>
+              {group.image && <button type="button" className="button secondary" onClick={removeGroupPhoto}
+                disabled={photoProcessing || photoSaving}>Remove photo</button>}
+            </div>
+            <p className="form-hint">JPG, PNG or WebP, up to 3 MB. Photos are resized before upload.</p>
+            {photoError && <p className="error" role="alert">{photoError}</p>}
+            {photoSaved && <p className="success" role="status">{photoSaved}</p>}
+          </div>
+        </Section>
         <Section title="Team colors">
           <p className="form-hint">Choose three different colors for this group.</p>
           <div className="team-color-settings">

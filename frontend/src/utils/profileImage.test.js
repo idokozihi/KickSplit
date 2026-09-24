@@ -4,6 +4,7 @@ import {
   PROFILE_IMAGE_MAX_DIMENSION,
   PROFILE_IMAGE_QUALITY,
   ProfileImageError,
+  processGroupImage,
   processProfileImage,
 } from "./profileImage.js";
 
@@ -103,5 +104,20 @@ test("canvas failures are reported separately from unreadable images", async () 
   await assert.rejects(
     processProfileImage({ type: "image/jpeg" }, { browser }),
     (error) => error instanceof ProfileImageError && error.code === "processing",
+  );
+});
+
+test("group images use the shared compression flow after group-specific validation", async () => {
+  const { browser } = imageBrowser();
+  const result = await processGroupImage({ type: "image/webp", size: 1024 }, { browser });
+  assert.equal(result, "data:image/jpeg;base64,processed");
+
+  await assert.rejects(
+    processGroupImage({ type: "image/gif", size: 1024 }, { browser }),
+    /JPG, PNG or WebP image under 3 MB/,
+  );
+  await assert.rejects(
+    processGroupImage({ type: "image/jpeg", size: 3 * 1024 * 1024 + 1 }, { browser }),
+    /under 3 MB/,
   );
 });

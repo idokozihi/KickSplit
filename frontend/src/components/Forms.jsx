@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../state/context";
-import { processProfileImage } from "../utils/profileImage";
+import { processGroupImage, processProfileImage } from "../utils/profileImage";
 import { Avatar, GroupImage, Icon, Modal } from "./UI";
 
 export function RatingFields({ value, onChange, disabled = false }) {
@@ -43,28 +43,27 @@ export function GroupFlow({ mode, onClose }) {
   const [readingImage, setReadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  function uploadImage(event) {
-    const file = event.target.files?.[0];
+  const imageRequest = useRef(false);
+  async function uploadImage(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
-    if (
-      !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-      file.size > 3 * 1024 * 1024
-    ) {
-      setError("Choose a JPG, PNG or WebP image under 3 MB.");
+    if (imageRequest.current || saving) {
+      input.value = "";
       return;
     }
+    imageRequest.current = true;
     setError("");
     setReadingImage(true);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImage(reader.result);
+    try {
+      setImage(await processGroupImage(file));
+    } catch (failure) {
+      setError(failure.message || "Could not process that image. Try another file.");
+    } finally {
+      imageRequest.current = false;
       setReadingImage(false);
-    };
-    reader.onerror = () => {
-      setError("Could not read that image. Try another file.");
-      setReadingImage(false);
-    };
-    reader.readAsDataURL(file);
+      input.value = "";
+    }
   }
   async function submit(event) {
     event.preventDefault();
@@ -127,13 +126,13 @@ export function GroupFlow({ mode, onClose }) {
               group={{ name: "Your group", initials: "", color: "green", image }}
               large
             />
-            <label className="upload-button">
-              {image ? "Change group image" : "Add a group image"}
+            <label className={`upload-button ${readingImage || saving ? "disabled" : ""}`}>
+              {readingImage ? "Processing image..." : image ? "Change group image" : "Add a group image"}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={uploadImage}
-                disabled={readingImage}
+                disabled={readingImage || saving}
               />
             </label>
             <small>Optional · JPG, PNG or WebP · up to 3 MB</small>

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { leaveGroup, loadGroup, loadGroupMembers, loadGroups, loadInviteToken, mapGroup, removeGroupMember, saveGroup, saveGroupPermissions, saveRatingSource, saveTeamColors, updateSelfRating } from "./groupsApi.js";
+import { leaveGroup, loadGroup, loadGroupMembers, loadGroups, loadInviteToken, mapGroup, removeGroupMember, saveGroup, saveGroupPermissions, saveRatingSource, saveTeamColors, updateGroupImage, updateSelfRating } from "./groupsApi.js";
 
 test("group detail and members load from their endpoints", async (t) => {
   const calls = [];
@@ -140,6 +140,37 @@ test("admin permission save PATCHes all settings and maps the saved group", asyn
 test("permission saves explain admin-only failures", async (t) => {
   t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 403 }));
   await assert.rejects(saveGroupPermissions(42, 7, {}), /Only group admins/);
+});
+
+test("group photo update PATCHes the authenticated numeric user and maps the saved group", async (t) => {
+  const imageUrl = "data:image/jpeg;base64,processed";
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/groups/42/image");
+    assert.equal(options.method, "PATCH");
+    assert.equal(options.headers["Content-Type"], "application/json");
+    assert.deepEqual(JSON.parse(options.body), { userId: 7, imageUrl });
+    return { ok: true, json: async () => ({ id: 42, name: "Friday FC", imageUrl }) };
+  });
+
+  const saved = await updateGroupImage("42", "7", imageUrl);
+  assert.equal(saved.id, "42");
+  assert.equal(saved.image, imageUrl);
+});
+
+test("group photo removal sends null and exposes backend errors", async (t) => {
+  const fetchMock = t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "/api/groups/42/image");
+    assert.deepEqual(JSON.parse(options.body), { userId: 7, imageUrl: null });
+    return { ok: true, json: async () => ({ id: 42, name: "Friday FC", imageUrl: null }) };
+  });
+
+  assert.equal((await updateGroupImage(42, 7, null)).image, "");
+  fetchMock.mock.mockImplementation(async () => ({
+    ok: false,
+    status: 403,
+    json: async () => ({ message: "Only group members can change the group photo." }),
+  }));
+  await assert.rejects(updateGroupImage(42, 7, null), /Only group members/);
 });
 
 test("admins request an invite token for their group and backend user id", async (t) => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { leaveGroup as leaveBackendGroup, loadGroups, saveGroup, resolveBackendUser } from "./groupsApi";
+import { leaveGroup as leaveBackendGroup, loadGroups, saveGroup, resolveBackendUser, updateGroupImage as updateBackendGroupImage } from "./groupsApi";
 import { loadRegistrations, saveRegistration, registrationState } from "./registrationsApi";
 import { createGame, deleteGame as deleteBackendGame, loadGroupGames, mergeGames } from "./gamesApi";
 import { loadGuests, saveGuest, mergeGuests } from "./guestsApi";
@@ -7,6 +7,7 @@ import { MockContext } from "./context";
 import { initialState, stateForUser, createProposedDay, respondToDay, gameDays } from "./mock";
 import { loginUser, registerUser } from "./authApi";
 import { saveUserProfile } from "./usersApi";
+import { mergeUpdatedGroup } from "./groupState";
 
 export default function MockProvider({ children }) {
   const [data, setData] = useState(() => {
@@ -103,16 +104,16 @@ export default function MockProvider({ children }) {
       ),
     }));
   const updateGroupDetails = useCallback((saved) => {
-    setData((current) => ({ ...current, groups: current.groups.map((group) => group.id === saved.id
-      ? {
-        ...group,
-        ratingSource: saved.ratingSource,
-        teamColors: saved.teamColors,
-        teamGenerationPermission: saved.teamGenerationPermission,
-        teamRegenerationMode: saved.teamRegenerationMode,
-        resultEntryPermission: saved.resultEntryPermission,
-      } : group) }));
+    setData((current) => ({ ...current, groups: mergeUpdatedGroup(current.groups, saved) }));
   }, []);
+  const updateGroupImage = async (groupId, imageUrl) => {
+    const backendUser = await resolveBackendUser(data.user);
+    const saved = await updateBackendGroupImage(groupId, backendUser.id, imageUrl);
+    setData((current) => current.user?.id === backendUser.id
+      ? { ...current, groups: mergeUpdatedGroup(current.groups, saved) }
+      : current);
+    return saved;
+  };
   const addGame = async (input) => {
     const backendUser = await resolveBackendUser(data.user);
     const game = await createGame({ ...input, userId: backendUser.id });
@@ -220,6 +221,7 @@ export default function MockProvider({ children }) {
         addGroup,
         updateRatings,
         updateGroupDetails,
+        updateGroupImage,
         addGame,
         deleteGame,
         leaveGroup,

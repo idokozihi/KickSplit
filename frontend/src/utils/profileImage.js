@@ -1,5 +1,7 @@
 export const PROFILE_IMAGE_MAX_DIMENSION = 512;
 export const PROFILE_IMAGE_QUALITY = 0.8;
+export const GROUP_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
+export const GROUP_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export class ProfileImageError extends Error {
   constructor(code, message, cause) {
@@ -145,4 +147,19 @@ export async function processProfileImage(
   } finally {
     decoded.close();
   }
+}
+
+export async function processGroupImage(file, options) {
+  const mimeType = typeof file?.type === "string" ? file.type.toLowerCase() : "";
+  if (
+    !file
+    || !GROUP_IMAGE_TYPES.includes(mimeType)
+    || (Number.isFinite(file.size) && file.size > GROUP_IMAGE_MAX_BYTES)
+  ) {
+    throw new ProfileImageError(
+      "unsupported",
+      "Choose a JPG, PNG or WebP image under 3 MB.",
+    );
+  }
+  return processProfileImage(file, options);
 }

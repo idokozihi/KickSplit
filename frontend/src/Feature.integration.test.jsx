@@ -5,7 +5,7 @@ import { CreateGameForm } from "./components/Forms";
 import Game from "./pages/Game";
 import Group from "./pages/Group";
 import MockProvider from "./state/MockProvider";
-import { MockContext } from "./state/context";
+import { MockContext, useApp } from "./state/context";
 
 const user = {
   id: 7,
@@ -44,6 +44,15 @@ function renderRoute(path, element, value) {
   );
 }
 
+function GroupImageStateHarness() {
+  const { groups, updateGroupImage } = useApp();
+  const current = groups.find((item) => item.id === "42");
+  return <>
+    <output data-testid="group-image-state">{current?.image || "No photo"}</output>
+    <button disabled={!current} onClick={() => updateGroupImage("42", "data:image/jpeg;base64,updated")}>Update photo</button>
+  </>;
+}
+
 beforeEach(() => {
   sessionStorage.clear();
   window.scrollTo = vi.fn();
@@ -63,6 +72,48 @@ afterEach(() => {
 });
 
 describe("feature integration", () => {
+  test("a saved group photo immediately updates shared provider state", async () => {
+    sessionStorage.setItem("kicksplit-profile", JSON.stringify(user));
+    vi.stubGlobal("fetch", vi.fn(async (url, options = {}) => {
+      if (url === "/api/groups/user/7") return jsonResponse([{ id: 42, name: "Friday FC", imageUrl: null }]);
+      if (url === "/api/games/group/42") return jsonResponse([]);
+      if (url === "/api/groups/42/image" && options.method === "PATCH") {
+        return jsonResponse({ id: 42, name: "Friday FC", imageUrl: "data:image/jpeg;base64,updated" });
+      }
+      throw new Error(`Unexpected request: ${options.method || "GET"} ${url}`);
+    }));
+
+    render(<MockProvider><GroupImageStateHarness /></MockProvider>);
+
+    const button = await screen.findByRole("button", { name: "Update photo" });
+    fireEvent.click(button);
+    await waitFor(() => expect(screen.getByTestId("group-image-state").textContent).toBe("data:image/jpeg;base64,updated"));
+  });
+
+  test("a non-admin group member can remove the group photo from settings", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url) => {
+      if (url === "/api/groups/42") return jsonResponse({ id: 42, name: "Friday FC", imageUrl: "data:image/jpeg;base64,current" });
+      if (url === "/api/groups/42/members") return jsonResponse([{ userId: 7, name: "Test Admin", admin: false }]);
+      throw new Error(`Unexpected request: GET ${url}`);
+    }));
+    const updateGroupImage = vi.fn(async () => ({ ...group, image: "" }));
+
+    renderRoute("/groups/42", <Group />, {
+      user,
+      groups: [{ ...group, image: "data:image/jpeg;base64,current" }],
+      games: [],
+      groupsLoading: false,
+      groupsError: "",
+      updateGroupDetails: vi.fn(),
+      updateGroupImage,
+      leaveGroup: vi.fn(),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove photo" }));
+    await waitFor(() => expect(updateGroupImage).toHaveBeenCalledWith("42", null));
+  });
+
   test("game creation carries the authenticated user through the form and provider", async () => {
     sessionStorage.setItem("kicksplit-profile", JSON.stringify(user));
     const requests = [];

@@ -2,12 +2,14 @@ package com.kicksplit.backend.controller;
 
 import java.util.List;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kicksplit.backend.dto.CreateGroupRequest;
@@ -15,14 +17,13 @@ import com.kicksplit.backend.dto.GroupMemberStatsResponseDto;
 import com.kicksplit.backend.dto.GroupResponseDto;
 import com.kicksplit.backend.dto.InviteTokenResponse;
 import com.kicksplit.backend.dto.JoinGroupRequest;
+import com.kicksplit.backend.dto.UpdateGroupImageRequest;
 import com.kicksplit.backend.dto.UpdateGroupPermissionsRequest;
 import com.kicksplit.backend.dto.UpdateRatingSourceRequest;
+import com.kicksplit.backend.dto.UpdateSelfRatingRequest;
 import com.kicksplit.backend.dto.UpdateTeamColorsRequest;
 import com.kicksplit.backend.entity.Group;
 import com.kicksplit.backend.service.GroupService;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import com.kicksplit.backend.dto.UpdateSelfRatingRequest;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -139,6 +140,19 @@ public class GroupController {
                 request.teamGenerationPermission(),
                 request.teamRegenerationMode(),
                 request.resultEntryPermission());
+
+        return GroupResponseDto.fromGroup(group);
+    }
+
+    @PatchMapping("/{groupId}/image")
+    public GroupResponseDto updateGroupImage(
+            @PathVariable Long groupId,
+            @RequestBody UpdateGroupImageRequest request) {
+
+        Group group = groupService.updateGroupImage(
+                groupId,
+                request.userId(),
+                request.imageUrl());
 
         return GroupResponseDto.fromGroup(group);
     }
