@@ -18,6 +18,8 @@ import com.kicksplit.backend.repository.StoredProposalPlayerRepository;
 public class RatingRecalculationService {
 
     private static final double BASE_K = 0.8;
+    private static final double MIN_K = 0.10;
+
     private static final double MIN_RATING = 1.0;
     private static final double MAX_RATING = 5.0;
 
@@ -87,16 +89,24 @@ public class RatingRecalculationService {
                                 .toList());
 
         double team1Strength =
-                calculateTeamStrength(teams.get(1), membersByUserId);
+                calculateTeamStrength(
+                        teams.get(1),
+                        membersByUserId);
 
         double team2Strength =
-                calculateTeamStrength(teams.get(2), membersByUserId);
+                calculateTeamStrength(
+                        teams.get(2),
+                        membersByUserId);
 
         double team3Strength =
-                calculateTeamStrength(teams.get(3), membersByUserId);
+                calculateTeamStrength(
+                        teams.get(3),
+                        membersByUserId);
 
         double totalStrength =
-                team1Strength + team2Strength + team3Strength;
+                team1Strength
+                        + team2Strength
+                        + team3Strength;
 
         int totalWins =
                 result.getTeam1Wins()
@@ -142,11 +152,13 @@ public class RatingRecalculationService {
         for (StoredProposalPlayer player : team) {
 
             if (player.getUserId() != null
-                    && membersByUserId.containsKey(player.getUserId())) {
+                    && membersByUserId.containsKey(
+                            player.getUserId())) {
 
-                totalRating += membersByUserId
-                        .get(player.getUserId())
-                        .getAppRating();
+                totalRating +=
+                        membersByUserId
+                                .get(player.getUserId())
+                                .getAppRating();
 
             } else {
                 // Guest: use the rating stored when the proposal was created.
@@ -176,35 +188,57 @@ public class RatingRecalculationService {
             }
 
             GroupMember member =
-                    membersByUserId.get(player.getUserId());
+                    membersByUserId.get(
+                            player.getUserId());
 
             if (member == null) {
                 continue;
             }
 
-            int gamesBefore = member.getRatedGames();
+            int gamesBefore =
+                    member.getRatedGames();
+
+            double currentK =
+                    BASE_K
+                            / Math.sqrt(
+                                    gamesBefore + 1.0);
 
             double k =
-                    BASE_K / Math.sqrt(gamesBefore + 1.0);
+                    Math.max(
+                            MIN_K,
+                            currentK);
 
             double change =
-                    k * (actualShare - expectedShare);
+                    k
+                            * (actualShare
+                                    - expectedShare);
 
             double newRating =
-                    clamp(member.getAppRating() + change);
+                    clamp(
+                            member.getAppRating()
+                                    + change);
 
             member.setAppRating(newRating);
-            member.setRatedGames(gamesBefore + 1);
+            member.setRatedGames(
+                    gamesBefore + 1);
+
             member.setTotalWins(
-                    member.getTotalWins() + teamWins);
+                    member.getTotalWins()
+                            + teamWins);
+
             member.setTotalRecordedWins(
-                    member.getTotalRecordedWins() + totalWins);
+                    member.getTotalRecordedWins()
+                            + totalWins);
         }
     }
 
-    private double clamp(double rating) {
+    private double clamp(
+            double rating) {
+
         return Math.max(
                 MIN_RATING,
-                Math.min(MAX_RATING, rating));
+                Math.min(
+                        MAX_RATING,
+                        rating));
     }
 }
