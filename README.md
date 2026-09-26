@@ -9,7 +9,7 @@ A full-stack platform for organizing recurring football games, generating balanc
 </div>
 
 <p align="center">
-  <img src="docs/images/kicksplit-hero.png" alt="KickSplit Hero" width="900"/>
+  <img src="docs/images/kicksplit-hero.png" alt="KickSplit Hero" width="680"/>
 </p>
 
 ---
@@ -72,7 +72,7 @@ Users create an account and can either create a football group or join an existi
 Player ratings are maintained per group rather than globally, since the relative level of a player may differ between different groups. Each member initially provides a self-rating, which serves as the starting point for later team generation and rating updates.
 
 <p align="center">
-  <img src="docs/images/groups-screen.png" alt="KickSplit groups screen" width="360"/>
+  <img src="docs/images/groups-screen.png" alt="KickSplit groups screen" width="220"/>
 </p>
 <p align="center"><em>Group management in KickSplit.</em></p>
 
@@ -83,7 +83,7 @@ A group can create proposed game days, and members independently indicate whethe
 The system also supports guest players who do not have an account. Guests are associated only with a specific game and are assigned a temporary rating by the user who adds them.
 
 <p align="center">
-  <img src="docs/images/group-games-screen.png" alt="KickSplit group games screen" width="360"/>
+  <img src="docs/images/group-games-screen.png" alt="KickSplit group games screen" width="220"/>
 </p>
 <p align="center"><em>Upcoming and completed games inside a football group.</em></p>
 
@@ -96,7 +96,7 @@ The proposals are then presented to the participating players, who can vote for 
 If participants are not satisfied with the available proposals, they can request a new set of teams. Once the required number of requests is reached, the previous proposals and votes are cleared and a new set of proposals is generated.
 
 <p align="center">
-  <img src="docs/images/team-proposals-screen.png" alt="KickSplit team proposals screen" width="360"/>
+  <img src="docs/images/team-proposals-screen.png" alt="KickSplit team proposals screen" width="220"/>
 </p>
 <p align="center"><em>Generated team proposals and balance information.</em></p>
 
@@ -107,7 +107,7 @@ After a game is played, the system stores the selected team proposal together wi
 Completed games are stored in the group history, allowing past team compositions and results to remain available instead of being lost in chat messages or informal records.
 
 <p align="center">
-  <img src="docs/images/past-games-screen.png" alt="KickSplit past games and results screen" width="360"/>
+  <img src="docs/images/past-games-screen.png" alt="KickSplit past games and results screen" width="220"/>
 </p>
 <p align="center"><em>Past games and recorded results.</em></p>
 
@@ -118,7 +118,7 @@ Game results are also used to maintain player statistics and a dynamic **App Rat
 The system stores statistics such as the number of games played, wins, and win rate. Groups can also choose whether future team generation should use the original **Self Rating** or the dynamic **App Rating**.
 
 <p align="center">
-  <img src="docs/images/group-members-screen.png" alt="KickSplit group members and ratings screen" width="360"/>
+  <img src="docs/images/group-members-screen.png" alt="KickSplit group members and ratings screen" width="220"/>
 </p>
 <p align="center"><em>Group members and player ratings.</em></p>
 
@@ -129,7 +129,7 @@ The system stores statistics such as the number of games played, wins, and win r
 KickSplit was implemented as a client-server web application with a clear separation between the user interface, backend logic, and persistent data storage.
 
 <p align="center">
-  <img src="docs/images/system-architecture.png" alt="KickSplit system architecture" width="900"/>
+  <img src="docs/images/system-architecture.png" alt="KickSplit system architecture" width="700"/>
 </p>
 <p align="center"><em>KickSplit system architecture and deployment.</em></p>
 
@@ -179,7 +179,7 @@ The main data model represents:
 - requests for new team proposals.
 
 <p align="center">
-  <img src="docs/images/conceptual-data-model.png" alt="KickSplit conceptual data model" width="900"/>
+  <img src="docs/images/conceptual-data-model.png" alt="KickSplit conceptual data model" width="700"/>
 </p>
 <p align="center"><em>Conceptual data model showing the main persisted entities and relationships.</em></p>
 
@@ -270,7 +270,7 @@ Because ties can be resolved differently, the same group of players can produce 
 After the runs are complete, duplicate proposals are removed, each remaining proposal receives a Balance Score, the proposals are ranked, and KickSplit returns up to the **three best generated proposals**.
 
 <p align="center">
-  <img src="docs/images/team-generation-flow.png" alt="KickSplit team generation flow" width="950"/>
+  <img src="docs/images/team-generation-flow.png" alt="KickSplit team generation flow" width="700"/>
 </p>
 <p align="center"><em>Team-generation flow from available players to the three best generated proposals.</em></p>
 
@@ -370,7 +370,7 @@ Because KickSplit currently records **team results rather than individual perfor
 If no wins are recorded for any team, the system treats the actual share as equal to the expected share, producing no rating change.
 
 <p align="center">
-  <img src="docs/images/app-rating-cycle.png" alt="KickSplit App Rating update cycle" width="900"/>
+  <img src="docs/images/app-rating-cycle.png" alt="KickSplit App Rating update cycle" width="700"/>
 </p>
 <p align="center"><em>How recorded game results influence future App Ratings and team generation.</em></p>
 
@@ -583,7 +583,7 @@ The average relative improvement was approximately **70.2%**, with a median impr
 | High Variance | 0.260 | 0.885 | 70.8% |
 
 <p align="center">
-  <img src="docs/images/experiment1_balance_comparison.png" alt="KickSplit vs Random Balance Comparison" width="760"/>
+  <img src="docs/images/experiment1_balance_comparison.png" alt="KickSplit vs Random Balance Comparison" width="680"/>
 </p>
 
 <p align="center"><em>Figure 1: Mean Balance Score of the best generated KickSplit proposal compared with the random-splitting baseline.</em></p>
@@ -611,7 +611,7 @@ The tracked strong player moved from **4.0** toward a True Skill of **4.8**, end
 The tracked weak player started at **2.6** with a True Skill of **2.0**, but ended at approximately **2.964** after 71 rated games.
 
 <p align="center">
-  <img src="docs/images/experiment2_player_trajectories.png" alt="App Rating Player Trajectories" width="760"/>
+  <img src="docs/images/experiment2_player_trajectories.png" alt="App Rating Player Trajectories" width="680"/>
 </p>
 
 <p align="center"><em>Figure 2: Example App Rating trajectories for a simulated strong player and weak player.</em></p>
@@ -628,7 +628,7 @@ At 40 rated games:
 | 50 | 0.421 |
 
 <p align="center">
-  <img src="docs/images/experiment2_noise_sensitivity.png" alt="App Rating Noise Sensitivity" width="760"/>
+  <img src="docs/images/experiment2_noise_sensitivity.png" alt="App Rating Noise Sensitivity" width="680"/>
 </p>
 
 <p align="center"><em>Figure 3: App Rating MAE over repeated games for different numbers of simulated rounds per game.</em></p>
@@ -647,7 +647,7 @@ After 300 rated games:
 | 50 | 0.383 | 0.356 |
 
 <p align="center">
-  <img src="docs/images/experiment2_k_robustness.png" alt="K Factor Robustness" width="760"/>
+  <img src="docs/images/experiment2_k_robustness.png" alt="K Factor Robustness" width="680"/>
 </p>
 
 <p align="center"><em>Figure 4: Mean App Rating error using the original decreasing-K strategy and the selected K = 0.10 floor.</em></p>
@@ -683,7 +683,7 @@ Peer Rating MAE was:
 | 5 | 0.143 | 0.275 | 0.388 |
 
 <p align="center">
-  <img src="docs/images/experiment3_app_vs_peer.png" alt="App Rating vs Peer Rating" width="760"/>
+  <img src="docs/images/experiment3_app_vs_peer.png" alt="App Rating vs Peer Rating" width="680"/>
 </p>
 
 <p align="center"><em>Figure 5: App Rating MAE compared with Peer Rating MAE after 300 rated games.</em></p>
