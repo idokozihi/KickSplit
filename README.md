@@ -14,8 +14,6 @@ A full-stack platform for organizing recurring football games, generating balanc
 
 ---
 
-> **README assets:** Keep the `docs/images/` and `docs/data/` folders in the repository together with this README so that the figures and experiment-data links render correctly on GitHub.
-
 ## Table of Contents
 
 1. [Introduction](#1-introduction)
@@ -33,23 +31,33 @@ A full-stack platform for organizing recurring football games, generating balanc
 
 # 1. Introduction
 
-Organizing recurring amateur football games involves several tasks that are often handled separately and manually. Players need to know when a game is planned, indicate whether they are available, decide who participates, divide the participants into teams, and later keep track of results and player performance.
+## The Problem
 
-The motivation for KickSplit came from the way these tasks were handled in my own football group. Player registration was managed through WhatsApp, team selection was discussed manually in the group chat, and there was no single place that maintained the players, games, team assignments, results, and changing perceptions of player level. Other amateur football groups may use different processes, but similar problems can arise when group management is spread across messaging applications, personal knowledge, and manual decisions.
+Organizing recurring amateur football games involves much more than simply deciding when and where to play. Players need to indicate their availability, the participating squad changes from game to game, teams must be created, results need to be recorded, and the perceived level of each player may change over time.
 
-One particularly important challenge is team formation. Even after the participating players are known, dividing them into balanced teams is not trivial. Manual selection is subjective, depends on the people creating the teams, and becomes more difficult when the participating players change from one game to another.
+These tasks are often handled using separate tools and informal processes. This can make the organization of a recurring group unnecessarily fragmented. Team formation is especially challenging: even when the list of participating players is known, creating teams that are reasonably balanced is not trivial, particularly when player levels vary and attendance changes every week.
 
-KickSplit was developed as a web-based system that brings these needs into one place. The system supports football-group management, game creation, player availability, guest players, balanced team proposals, voting between proposals, game results, history, player statistics, and ratings. Its central algorithmic component uses player ratings to generate several balanced three-team proposals.
+## Motivation
 
-The system also maintains a dynamic **App Rating** for each player within a group. The rating begins from the player's self-rating and is updated over time using game results. This allows future team generation to use information accumulated from previous games rather than relying only on the initial subjective estimate.
+The motivation for KickSplit came directly from the way games were organized in my own football group. Player registration was handled through **WhatsApp**, while team division was performed separately using **ChatGPT**. To generate teams, player information had to be transferred manually into another tool, and the resulting teams were then brought back to the group.
 
-Alongside the development of the complete client-server system, the project evaluates several algorithmic questions:
+At the same time, there was no single place that maintained player ratings, availability, previous team assignments, game results, and player statistics. Each part of the process existed separately. The problem was therefore not only how to create balanced teams, but also how to connect the entire workflow into one consistent system.
+
+Other amateur football groups may organize their games differently, but the same general problem can appear whenever game management depends on messaging applications, manual decisions, and information that is scattered across several places.
+
+## Goal
+
+KickSplit was developed as a web-based platform that brings this process into one system. The application supports group management, game creation, player availability, guest players, balanced team proposals, voting between proposals, recorded results, game history, player statistics, and ratings.
+
+A central part of the project is the team-generation algorithm. KickSplit uses player ratings to generate several balanced three-team proposals rather than producing only a single split. In addition, the system maintains a dynamic **App Rating** that begins from the player's initial self-rating and can change over time according to recorded game results.
+
+The project therefore has two connected goals: to build a practical system for managing recurring amateur football games, and to evaluate the algorithmic mechanisms used for team balancing and player ratings.
+
+The experimental part of the project focuses on three main questions:
 
 - Does KickSplit generate more balanced teams than random splitting?
-- Can the App Rating move toward a player's underlying skill level over repeated games?
-- How does the App Rating compare with ratings provided by other players?
-
-The project therefore combines software-system development with algorithmic design and experimental evaluation, with the goal of creating a practical platform for amateur football groups while also examining the behavior and limitations of its team-balancing and rating mechanisms.
+- Can the App Rating improve its estimate of player skill over repeated games?
+- How does App Rating compare with ratings provided by other players?
 
 ---
 
@@ -63,11 +71,21 @@ Users create an account and can either create a football group or join an existi
 
 Player ratings are maintained per group rather than globally, since the relative level of a player may differ between different groups. Each member initially provides a self-rating, which serves as the starting point for later team generation and rating updates.
 
+<p align="center">
+  <img src="docs/images/groups-screen.png" alt="KickSplit groups screen" width="360"/>
+</p>
+<p align="center"><em>Group management in KickSplit.</em></p>
+
 ## 2.2 Game Planning and Availability
 
 A group can create proposed game days, and members independently indicate whether they are available for each game. Players who are marked as available are considered when teams are generated.
 
 The system also supports guest players who do not have an account. Guests are associated only with a specific game and are assigned a temporary rating by the user who adds them.
+
+<p align="center">
+  <img src="docs/images/group-games-screen.png" alt="KickSplit group games screen" width="360"/>
+</p>
+<p align="center"><em>Upcoming and completed games inside a football group.</em></p>
 
 ## 2.3 Team Proposals and Voting
 
@@ -77,11 +95,21 @@ The proposals are then presented to the participating players, who can vote for 
 
 If participants are not satisfied with the available proposals, they can request a new set of teams. Once the required number of requests is reached, the previous proposals and votes are cleared and a new set of proposals is generated.
 
+<p align="center">
+  <img src="docs/images/team-proposals-screen.png" alt="KickSplit team proposals screen" width="360"/>
+</p>
+<p align="center"><em>Generated team proposals and balance information.</em></p>
+
 ## 2.4 Results and Game History
 
 After a game is played, the system stores the selected team proposal together with the number of wins achieved by each of the three teams.
 
 Completed games are stored in the group history, allowing past team compositions and results to remain available instead of being lost in chat messages or informal records.
+
+<p align="center">
+  <img src="docs/images/past-games-screen.png" alt="KickSplit past games and results screen" width="360"/>
+</p>
+<p align="center"><em>Past games and recorded results.</em></p>
 
 ## 2.5 Ratings and Player Statistics
 
@@ -89,50 +117,37 @@ Game results are also used to maintain player statistics and a dynamic **App Rat
 
 The system stores statistics such as the number of games played, wins, and win rate. Groups can also choose whether future team generation should use the original **Self Rating** or the dynamic **App Rating**.
 
-The overall system flow can therefore be summarized as:
-
-```text
-Users
-→ Groups
-→ Games
-→ Availability
-→ Guests
-→ Team Proposals
-→ Voting
-→ Results
-→ History
-→ Ratings / Stats
-```
+<p align="center">
+  <img src="docs/images/group-members-screen.png" alt="KickSplit group members and ratings screen" width="360"/>
+</p>
+<p align="center"><em>Group members and player ratings.</em></p>
 
 ---
 
 # 3. Architecture & Implementation
 
-KickSplit was implemented as a client-server web application with a clear separation between the user interface, application logic, and persistent data storage.
+KickSplit was implemented as a client-server web application with a clear separation between the user interface, backend logic, and persistent data storage.
 
-```text
-              React Frontend
-                    |
-                 REST API
-                    |
-              Spring Boot
-          /         |          \
-     Services   Algorithms   Repositories
-                               |
-                          PostgreSQL
-```
+<p align="center">
+  <img src="docs/images/system-architecture.png" alt="KickSplit system architecture" width="900"/>
+</p>
+<p align="center"><em>KickSplit system architecture and deployment.</em></p>
+
+The overall architecture consists of a React frontend communicating through a REST API with a Spring Boot backend, which manages the application logic and stores persistent data in PostgreSQL.
 
 ## 3.1 Frontend
 
 The client side of KickSplit was developed using **React** and **Vite**, with **React Router** used for navigation between the different application views.
 
-The frontend is responsible for presenting the system state and user interactions, including authentication, groups, games, availability, team proposals, voting, results, player statistics, and profile management. Data that must persist between users or sessions is retrieved from and sent to the backend through REST API requests.
+The frontend handles the user-facing parts of the system, including authentication, groups, games, availability, team proposals, voting, results, player statistics, and profile management. Persistent information is retrieved from and sent to the backend through REST API requests.
 
-The application was also configured as a **Progressive Web App (PWA)**, allowing it to provide an application-like experience on mobile devices while remaining a web application.
+KickSplit was also configured as a **Progressive Web App (PWA)**, providing an application-like experience on mobile devices while remaining a web application.
 
 ## 3.2 Backend
 
-The server side was implemented in **Java 21** using **Spring Boot**. The backend contains the main business logic of the system and follows a layered structure based primarily on controllers, services, repositories, and entities.
+The server side was implemented in **Java 21** using **Spring Boot**.
+
+The backend contains the main business logic of the system and follows a layered structure:
 
 ```text
 Controller
@@ -144,202 +159,195 @@ Repository
 Database
 ```
 
-Controllers expose the REST endpoints used by the frontend. Services implement the application logic, such as game management, registrations, results, voting, team proposal generation, and rating recalculation. Repositories provide the persistence layer through Spring Data JPA.
+Controllers expose the REST endpoints used by the frontend. Services implement the application logic, including game management, availability, voting, result handling, team proposal generation, and rating recalculation. Repositories provide database access through **Spring Data JPA**.
 
-The algorithmic components are also executed on the backend. In particular, team generation, balance-score calculation, proposal generation, and App Rating updates are implemented independently from the user interface.
+The algorithmic components of KickSplit are also executed on the backend, separating team generation and rating logic from the user interface.
 
 ## 3.3 Database and Data Model
 
 Persistent data is stored in a **PostgreSQL** database using JPA entities.
 
-The main data model contains entities representing:
+The main data model represents:
 
 - users and football groups;
-- membership of users in groups and their group-specific ratings;
-- proposed games and player availability;
+- group memberships and group-specific player ratings;
+- games and player availability;
 - guest players;
-- generated team proposals and the players assigned to each team;
-- votes on team proposals;
-- recorded game results;
-- requests for generating new teams.
+- generated team proposals;
+- votes;
+- game results;
+- requests for new team proposals.
 
-One important design decision is that player ratings belong to the relationship between a **User** and a **Group**, rather than directly to the user. This reflects the fact that a player's perceived level may be different relative to different groups.
+<p align="center">
+  <img src="docs/images/conceptual-data-model.png" alt="KickSplit conceptual data model" width="900"/>
+</p>
+<p align="center"><em>Conceptual data model showing the main persisted entities and relationships.</em></p>
 
-Generated proposals are also persisted rather than being generated independently for every client. As a result, different users viewing the same game see the same proposed teams and the same accumulated votes.
+An important design decision is that player ratings belong to the relationship between a **User** and a **Group**, rather than directly to the user. This allows the same player to have a different rating in different football groups.
 
-## 3.4 Interaction Between Components
+Generated team proposals are also stored in the database. Therefore, all users viewing the same game see the same proposals and the same current voting state.
 
-A typical request passes through several layers of the system. For example, when team proposals are requested, the frontend sends the request to the backend API. The backend obtains the relevant participants and ratings from the database, invokes the team-generation algorithm, stores the generated proposals, and returns them to the client.
+## 3.4 Component Interaction
+
+When the frontend requests team proposals, the backend retrieves the relevant players and ratings, runs the team-generation algorithm, stores the generated proposals, and returns them to the frontend.
 
 ```text
 React UI
    ↓
-REST Request
+REST API
    ↓
-Spring Controller
-   ↓
-Service
+Spring Boot Service
    ↓
 Team Generation Algorithm
    ↓
-Repository / PostgreSQL
-   ↓
-REST Response
+PostgreSQL
    ↓
 React UI
 ```
 
-A similar flow is used after game results are entered. The result is persisted and the backend invokes the rating-recalculation logic, allowing the updated player information to influence future team generation.
+The same architecture is used when game results are recorded: the result is stored in the database and the backend updates the relevant player ratings, which can then affect future team generation.
 
 ## 3.5 Deployment
 
-KickSplit was developed locally and later deployed as a working web application.
+KickSplit was first developed locally and was later deployed as a working web application.
 
-The production frontend is built as a static React application and deployed on **Render**. The Spring Boot backend is deployed separately on **Render**, while the production PostgreSQL database is hosted using **Neon**.
+The production **React frontend** and **Spring Boot backend** are deployed separately on **Render**, while the production **PostgreSQL database** is hosted on **Neon**.
 
-Environment variables are used for production-specific configuration such as the database connection and server settings. This allows the same codebase to operate both with a local PostgreSQL database during development and with the hosted production database after deployment.
+Environment variables are used for production-specific configuration, allowing the same codebase to work with both the local development environment and the deployed production environment.
 
 ---
 
 # 4. Algorithmic Design
 
-The main algorithmic component of KickSplit is responsible for transforming the set of available players into balanced team proposals and, over time, improving the ratings used for future team generation.
+The algorithmic side of KickSplit has two main responsibilities: **creating balanced teams for the current game** and **improving the player ratings used in future games**.
 
-The process consists of five main parts: selecting player ratings, generating an initial greedy split, producing multiple candidate proposals, evaluating them using a balance score, and updating player ratings from recorded game results.
+The full process starts with the players who are available for a game, uses their ratings to generate several team proposals, evaluates how balanced those proposals are, and later uses the recorded results to update the App Rating.
 
-## 4.1 Player Ratings
+## 4.1 Choosing the Player Rating
 
-Before generating teams, KickSplit collects all registered players who marked themselves as `AVAILABLE` for the selected game, together with any guest players added to that game.
+Before generating teams, KickSplit collects all registered players marked as `AVAILABLE`, together with any guest players added to the game.
 
-Each participant is represented by a numerical rating. For registered group members, the group can choose between two rating sources:
+Each participant is represented by a numerical rating. For registered players, the group can choose which rating source should be used:
 
-- **Self Rating** — the player's original overall rating.
-- **App Rating** — the dynamic rating maintained by KickSplit based on previous game results.
+- **Self Rating** — the rating initially provided by the player.
+- **App Rating** — a dynamic rating learned from previous game results.
 
-Guest players are assigned a rating when they are added to the game.
+Guest players receive a temporary rating when they are added to the game.
 
-## 4.2 Greedy Team Split
+This separation is useful because the team-generation algorithm itself does not depend on where the rating came from. It simply receives a list of players and their current ratings.
 
-KickSplit always divides the participating players into three teams.
+## 4.2 Building One Team Split
 
-The algorithm first determines the target size of each team. When the number of participants is not divisible by three, the extra players are distributed so that the difference between team sizes is at most one player.
+KickSplit always divides the participating players into **three teams**.
 
-The players are then sorted from highest rating to lowest rating. Starting with the strongest player, each player is assigned to an eligible team whose current total rating is the lowest.
+The algorithm first calculates the required size of each team. If the number of players is not divisible by three, the extra players are distributed so that the difference between team sizes is never greater than one.
 
-If several eligible teams have exactly the same current rating sum, one of them is selected randomly.
+The players are then sorted from **highest rating to lowest rating**.
+
+Processing the strongest players first is intentional: high-rated players have the greatest effect on the strength of a team, so placing them early makes it easier to compensate with the remaining players.
+
+For each player, the algorithm looks at the teams that still have room and assigns the player to the team with the **lowest current total rating**.
 
 ```text
-sort players by rating from highest to lowest
+Sort players from strongest to weakest
 
-create three empty teams
-determine the target size of each team
-
-for each player:
-    find teams that are not yet full
-
-    among those teams:
-        find the minimum current rating sum
-
-    if several teams have the same minimum:
-        choose one randomly
-
+For each player:
+    find teams that still have room
+    find the team with the lowest rating sum
     assign the player to that team
 ```
 
-The greedy strategy attempts to compensate for strong players early in the process by placing later players into the teams that currently have the lowest accumulated rating.
+If several eligible teams have the same minimum rating sum, one of them is selected randomly.
 
-## 4.3 Proposal Generation
+This is a greedy strategy: every decision is based on the current state of the teams, without trying every possible future combination.
 
-Because the greedy algorithm contains random tie-breaking, a single execution does not necessarily represent the best split that the method can generate.
+## 4.3 From One Split to Several Proposals
 
-KickSplit therefore executes the splitting process **100 times** for the same set of participants.
+A single greedy run is not always enough.
 
-For every generated split, the system calculates a Balance Score. Duplicate proposals are removed before ranking the results. Two proposals are considered identical even if the same three teams appear in a different team order.
+Because ties can be resolved differently, the same group of players can produce more than one valid split. KickSplit therefore repeats the greedy splitting procedure **100 times**.
 
-The remaining proposals are sorted according to their Balance Score, from lowest to highest, and the system returns up to the **three best generated proposals**.
+After the runs are complete, duplicate proposals are removed, each remaining proposal receives a Balance Score, the proposals are ranked, and KickSplit returns up to the **three best generated proposals**.
 
-```text
-Available Players
-      ↓
-100 Greedy Splits
-      ↓
-Remove Duplicate Proposals
-      ↓
-Calculate Balance Score
-      ↓
-Sort by Score
-      ↓
-Return up to 3 Best Generated Proposals
-```
+<p align="center">
+  <img src="docs/images/team-generation-flow.png" alt="KickSplit team generation flow" width="950"/>
+</p>
+<p align="center"><em>Team-generation flow from available players to the three best generated proposals.</em></p>
 
-This approach does not guarantee a globally optimal team division. Instead, it searches among multiple randomized greedy solutions and selects the strongest proposals generated during that process.
+Two proposals are treated as identical if they contain the same three teams, even when the teams appear in a different order.
 
-## 4.4 Balance Score
+The algorithm does **not** claim to find the globally optimal division. Instead, it generates a collection of greedy solutions and keeps the strongest ones it found.
 
-For a team \(T_i\), its average rating is:
+## 4.4 Measuring Team Balance
 
-\[
+To compare two team proposals, KickSplit needs a simple numerical measure of balance.
+
+For each team $T_i$, the average player rating is:
+
+$$
 Avg(T_i)=
 \frac{\sum_{p \in T_i} Rating(p)}
 {|T_i|}
-\]
+$$
 
-The Balance Score of a proposal is:
+The **Balance Score** is then defined as the difference between the strongest and weakest team averages:
 
-\[
+$$
 BalanceScore =
 \max_i Avg(T_i)
 -
 \min_i Avg(T_i)
-\]
+$$
 
-A lower Balance Score indicates that the average ratings of the three teams are closer to one another.
-
-Example:
+For example:
 
 ```text
-Team 1: 3.20
-Team 2: 3.15
-Team 3: 3.30
+Team 1 average: 3.20
+Team 2 average: 3.15
+Team 3 average: 3.30
 
 Balance Score = 3.30 - 3.15 = 0.15
 ```
 
-## 4.5 App Rating
+A score close to **0** means that the three teams have very similar average ratings. Therefore, **lower is better**.
 
-KickSplit maintains a dynamic **App Rating** for registered players. The App Rating begins from the player's initial rating seed and is recalculated from the group's recorded game history.
+## 4.5 Learning From Game Results — App Rating
 
-For each completed game, the system first calculates the current strength of each team as the average App Rating of its players. Guest players contribute the rating that was stored when the proposal was generated.
+Team balancing is only as useful as the ratings given to the algorithm.
 
-If the three team strengths are \(S_1\), \(S_2\), and \(S_3\), the expected share of team \(i\) is:
+For this reason, KickSplit also maintains a dynamic **App Rating**. It starts from the player's initial rating and changes over time according to recorded game results.
 
-\[
+For each completed game, the system calculates the strength of every team using the average App Rating of its players.
+
+If the team strengths are $S_1$, $S_2$, and $S_3$, the expected share of team $i$ is:
+
+$$
 Expected_i =
 \frac{S_i}
 {S_1+S_2+S_3}
-\]
+$$
 
-The actual share is calculated from the recorded number of wins:
+The actual share is based on the number of wins recorded for the three teams:
 
-\[
+$$
 Actual_i =
 \frac{Wins_i}
 {Wins_1+Wins_2+Wins_3}
-\]
+$$
 
-The rating update for every registered player on the team is:
+The rating update is:
 
-\[
+$$
 Rating_{new}
 =
 Rating_{old}
 +
 K(Actual_i-Expected_i)
-\]
+$$
 
-The update factor is:
+The value of $K$ decreases as a player accumulates more games:
 
-\[
+$$
 K =
 \max
 \left(
@@ -347,33 +355,24 @@ K =
 \frac{0.8}
 {\sqrt{games+1}}
 \right)
-\]
+$$
 
-Early results can therefore cause larger rating changes, while later results produce more moderate updates. The minimum value of **0.10** prevents the learning rate from becoming too small.
+This means that early games can cause larger changes, while ratings become more stable as more history is collected. The minimum value of **0.10** ensures that the rating never stops adapting completely.
 
-Ratings are restricted to:
+App Ratings are always restricted to:
 
-\[
+$$
 1.0 \leq AppRating \leq 5.0
-\]
+$$
 
-All registered players on the same team receive the same rating change for that game because the available result data describes team performance rather than individual contribution.
+Because KickSplit currently records **team results rather than individual performance**, every registered player on the same team receives the same rating change for that game.
 
 If no wins are recorded for any team, the system treats the actual share as equal to the expected share, producing no rating change.
 
-```text
-Current Ratings
-      ↓
-Team Generation
-      ↓
-Game Played
-      ↓
-Recorded Results
-      ↓
-App Rating Update
-      ↓
-Future Team Generation
-```
+<p align="center">
+  <img src="docs/images/app-rating-cycle.png" alt="KickSplit App Rating update cycle" width="900"/>
+</p>
+<p align="center"><em>How recorded game results influence future App Ratings and team generation.</em></p>
 
 ---
 
@@ -589,8 +588,6 @@ The average relative improvement was approximately **70.2%**, with a median impr
 
 <p align="center"><em>Figure 1: Mean Balance Score of the best generated KickSplit proposal compared with the random-splitting baseline.</em></p>
 
-**Summary data:** [Experiment 1 CSV](docs/data/experiment1_summary.csv)
-
 The absolute Balance Score increased as player-rating variation increased, while the relative improvement over random splitting remained close to 70% across all three group types.
 
 ## 7.2 Experiment 2 — App Rating Learning Dynamics
@@ -655,8 +652,6 @@ After 300 rated games:
 
 <p align="center"><em>Figure 4: Mean App Rating error using the original decreasing-K strategy and the selected K = 0.10 floor.</em></p>
 
-**Summary data:** [Experiment 2 CSV](docs/data/experiment2_report_summary.csv)
-
 The final production implementation therefore uses:
 
 \[
@@ -692,8 +687,6 @@ Peer Rating MAE was:
 </p>
 
 <p align="center"><em>Figure 5: App Rating MAE compared with Peer Rating MAE after 300 rated games.</em></p>
-
-**Summary data:** [Experiment 3 CSV](docs/data/experiment3_app_vs_peer_summary.csv)
 
 With low peer noise, averaging several peer ratings produced highly accurate estimates.
 
