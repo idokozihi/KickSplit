@@ -1,0 +1,6 @@
+Stage,Key result,Interpretation
+Initial 5-round convergence,MAE: 0.4538 → 0.4846 by 40 games,High result noise can make App Rating less accurate initially.
+Tracked strong player,4.00 → 4.7722; True Skill 4.80,Illustrates successful correction of an underestimated player.
+Tracked weak player,2.60 → 2.9635; True Skill 2.00,Illustrates limitation of team-level updates under noisy results.
+Noise sensitivity,"At 40 games: 5r=0.4767, 10r=0.4389, 20r=0.4308, 50r=0.4206",More informative match results improve learning.
+K robustness,"At 300 games, FLOOR_0_10 mean MAE: 0.4495 / 0.3953 / 0.3742 / 0.3563",0.10 floor is a robust compromise across 5/10/20/50 rounds.
