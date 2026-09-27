@@ -516,29 +516,31 @@ They should not be interpreted as proof that real football groups behave exactly
 The purpose of the experiments is to evaluate the internal behavior of the algorithms under reasonable and reproducible assumptions rather than to create conditions in which KickSplit is guaranteed to outperform alternative methods.
 
 ---
+בטח — תעתיק ל־VS בדיוק את זה:
+
+```md
 # 6. Evaluation Metrics
 
 Three main metrics were used.
 
 ## 6.1 Balance Score
 
-$$
-\text{BalanceScore} =
-\max_i \text{Avg}(T_i)
--
-\min_i \text{Avg}(T_i)
-$$
+The Balance Score measures the difference between the highest and lowest team average ratings:
+
+```text
+Balance Score = max team average - min team average
+```
 
 Lower values indicate more balanced teams.
 
 ## 6.2 Improvement over Random Splitting
 
-$$
-\text{Improvement}(\%) =
-\frac{\text{RandomScore} - \text{KickSplitScore}}
-{\text{RandomScore}}
-\times 100
-$$
+The improvement over the random baseline is calculated as:
+
+```text
+Improvement (%) =
+((Random Score - KickSplit Score) / Random Score) × 100
+```
 
 A larger positive value indicates greater improvement over the random baseline.
 
@@ -546,18 +548,14 @@ A larger positive value indicates greater improvement over the random baseline.
 
 Experiments 2 and 3 use **Mean Absolute Error (MAE)** to measure rating accuracy:
 
-$$
-\text{MAE} =
-\frac{1}{N}
-\sum_{i=1}^{N}
-\left|
-\text{EstimatedRating}_i - \text{TrueSkill}_i
-\right|
-$$
+```text
+MAE = (1 / N) × Σ |Estimated Rating - True Skill|
+```
 
 Lower MAE indicates that the estimated ratings are closer to the hidden True Skill values.
 
 Because MAE is measured on the same 1–5 rating scale, it also has a direct interpretation. For example, an MAE of **0.40** means that the estimated rating differs from True Skill by about **0.40 rating points on average**.
+```
 ---
 
 # 7. Results
