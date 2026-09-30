@@ -292,12 +292,7 @@ $$
 
 The **Balance Score** is then defined as the difference between the strongest and weakest team averages:
 
-$$
-BalanceScore =
-\max_i Avg(T_i)
--
-\min_i Avg(T_i)
-$$
+Balance Score = max team average - min team average
 
 For example:
 
@@ -337,13 +332,7 @@ $$
 
 The rating update is:
 
-$$
-Rating_{new}
-=
-Rating_{old}
-+
-K(Actual_i-Expected_i)
-$$
+Rating_new = Rating_old + K × (Actual - Expected)
 
 The value of $K$ decreases as a player accumulates more games:
 
@@ -461,7 +450,11 @@ Different update-rate strategies were also evaluated, including several minimum 
 
 The final robustness comparison used several independent seed sets and deterministic seeded versions of the randomized splitting procedure to ensure reproducible parameter comparisons.
 
-Two individual players were also tracked as illustrative cases:
+In addition to the population-level MAE, two individual players were tracked to illustrate how the App Rating behaves over time in specific cases.
+
+The first was a strong player whose initial rating underestimated the player's True Skill. The second was a weaker player whose initial rating overestimated the player's True Skill.
+
+Tracking both cases makes it possible to observe whether the rating system can correct estimation errors in both directions, rather than looking only at the average error across the full simulated population.
 
 ```text
 Strong player:
@@ -516,6 +509,7 @@ They should not be interpreted as proof that real football groups behave exactly
 The purpose of the experiments is to evaluate the internal behavior of the algorithms under reasonable and reproducible assumptions rather than to create conditions in which KickSplit is guaranteed to outperform alternative methods.
 
 ---
+
 # 6. Evaluation Metrics
 
 Three main metrics were used.
@@ -579,7 +573,9 @@ The absolute Balance Score increased as player-rating variation increased, while
 
 ### Initial Behavior
 
-In the initial 5-round experiment, population-level App Rating error did not improve.
+The first version of the experiment used five simulated rounds per game and examined whether repeated game results caused the App Rating to move closer to the players' hidden True Skill values.
+
+At the population level, the App Rating error did not improve:
 
 | Rated Games | App Rating MAE |
 |---:|---:|
@@ -589,11 +585,13 @@ In the initial 5-round experiment, population-level App Rating error did not imp
 | 20 | 0.487 |
 | 40 | 0.485 |
 
-This showed that repeated rating updates alone do not guarantee greater accuracy.
+Instead of decreasing, the average error increased slightly. This showed that repeatedly updating the rating does not automatically make it more accurate when game results contain substantial noise.
 
-The tracked strong player moved from **4.0** toward a True Skill of **4.8**, ending at approximately **4.772** after 69 rated games.
+The two individual players introduced in Section 5.2 illustrate how the same rating mechanism can behave differently for different players.
 
-The tracked weak player started at **2.6** with a True Skill of **2.0**, but ended at approximately **2.964** after 71 rated games.
+The strong player started with a rating of **4.0**, below a True Skill of **4.8**, and moved toward the correct value, reaching approximately **4.772** after 69 rated games.
+
+The weak player started with a rating of **2.6**, above a True Skill of **2.0**, but moved in the wrong direction and ended at approximately **2.964** after 71 rated games.
 
 <p align="center">
   <img src="docs/images/experiment2_player_trajectories.png" alt="App Rating Player Trajectories" width="680"/>
@@ -601,7 +599,13 @@ The tracked weak player started at **2.6** with a True Skill of **2.0**, but end
 
 <p align="center"><em>Figure 2: Example App Rating trajectories for a simulated strong player and weak player.</em></p>
 
+These results motivated a second question: was the poor population-level behavior caused partly by noisy game results?
+
 ### Effect of Result Noise
+
+To test this, the amount of information contained in each simulated game was varied by changing the number of rounds used to produce the game result.
+
+More rounds reduce the influence of short-term randomness and make the final result more representative of the underlying team strengths.
 
 At 40 rated games:
 
@@ -618,9 +622,15 @@ At 40 rated games:
 
 <p align="center"><em>Figure 3: App Rating MAE over repeated games for different numbers of simulated rounds per game.</em></p>
 
-More informative game results produced more accurate long-term ratings.
+The error decreased as the number of rounds increased. This indicates that the App Rating learns more accurately when game results contain more reliable information about the relative strength of the teams.
+
+This led to the final part of the experiment: examining whether the rating update rate itself could be improved.
 
 ### K-Factor Robustness
+
+The original update rule gradually reduced the K-factor as more games were played. This makes ratings increasingly stable, but after many games it can also make corrections very small.
+
+A modified rule was therefore tested in which K is never allowed to fall below **0.10**.
 
 After 300 rated games:
 
@@ -637,16 +647,13 @@ After 300 rated games:
 
 <p align="center"><em>Figure 4: Mean App Rating error using the original decreasing-K strategy and the selected K = 0.10 floor.</em></p>
 
-The final production implementation therefore uses:
+The 0.10 floor produced only a small improvement in the noisiest condition, but produced clearer improvements as game results became more informative.
 
-\[
-K =
-\max
-\left(
-0.10,\;
-\frac{0.8}{\sqrt{games+1}}
-\right)
-\]
+For this reason, the final production implementation uses:
+
+K = max(0.10, 0.8 / sqrt(games + 1))
+
+This keeps the rating responsive to new information even after a player has accumulated a long game history.
 
 ## 7.3 Experiment 3 — App Rating vs. Peer Rating
 
