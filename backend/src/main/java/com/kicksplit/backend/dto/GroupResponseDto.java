@@ -19,7 +19,7 @@ public class GroupResponseDto {
     private TeamGenerationPermission teamGenerationPermission;
     private TeamRegenerationMode teamRegenerationMode;
     private ResultEntryPermission resultEntryPermission;
-
+    
     public GroupResponseDto(
             Long id,
             String name,

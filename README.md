@@ -215,6 +215,105 @@ The production **React frontend** and **Spring Boot backend** are deployed separ
 
 Environment variables are used for production-specific configuration, allowing the same codebase to work with both the local development environment and the deployed production environment.
 
+## 3.6 Testing and Verification
+
+The project includes automated tests for both the algorithmic components and the application workflow.
+
+### Backend Tests
+
+The backend contains unit tests for the core team-generation components, including:
+
+- team splitting;
+- Balance Score calculation;
+- proposal generation;
+- random splitting;
+- edge cases involving different numbers of players.
+
+Integration tests exercise REST API behavior using **Spring Boot**, **MockMvc**, and an in-memory **H2 database** configured in PostgreSQL compatibility mode.
+
+These tests cover application flows such as game creation and deletion, group-member operations, rating updates, permissions, and API response contracts.
+
+Backend tests can be executed from the `backend` directory with:
+
+```powershell
+.\mvnw.cmd test
+```
+
+### Frontend Tests
+
+The frontend uses **Vitest** and **React Testing Library** for integration-level testing.
+
+The tests cover flows such as:
+
+- authentication and invitation routing;
+- profile setup;
+- group image updates;
+- game creation;
+- member and rating interactions;
+- access to game-management actions.
+
+Frontend tests can be executed from the `frontend` directory with:
+
+```powershell
+npm test
+```
+
+The combination of algorithm-level tests and application integration tests helps verify both the numerical core of KickSplit and the behavior of the surrounding system.
+
+## 3.7 Local Development and Running
+
+### Requirements
+
+To run KickSplit locally, the main requirements are:
+
+- **Java 21**
+- **Node.js and npm**
+- **PostgreSQL**
+
+The backend expects a PostgreSQL database named `kicksplit` by default at:
+
+```text
+jdbc:postgresql://localhost:5432/kicksplit
+```
+
+The default database username is:
+
+```text
+postgres
+```
+
+The database password is supplied through the `DB_PASSWORD` environment variable. The database URL and username can also be overridden using `DB_URL` and `DB_USERNAME`.
+
+### Running the Backend
+
+From the project root:
+
+```powershell
+cd backend
+$env:DB_PASSWORD="your-postgresql-password"
+.\mvnw.cmd spring-boot:run
+```
+
+By default, the backend runs on:
+
+```text
+http://localhost:8080
+```
+
+### Running the Frontend
+
+Open another terminal and run:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+During local development, Vite proxies requests beginning with `/api` to the backend at `http://localhost:8080`.
+
+The terminal will display the local frontend address after the development server starts.
+
 ---
 
 # 4. Algorithmic Design
@@ -406,6 +505,8 @@ Best generated KickSplit proposal
 Average Balance Score of random splitting
 ```
 
+The random baseline represents ordinary random team assignment rather than an optimized random-search procedure. The purpose of this experiment is therefore to measure the practical improvement provided by KickSplit over typical random splitting, not to establish global optimality.
+
 ## 5.2 Experiment 2 — App Rating Learning Dynamics
 
 The second experiment examines whether the App Rating can learn from repeated game results.
@@ -439,7 +540,7 @@ To study result noise, the experiment was repeated with:
 50 rounds per game
 ```
 
-Different update-rate strategies were also evaluated, including several minimum values for \(K\):
+Different update-rate strategies were also evaluated. A deterministic parameter sweep compared minimum K values of:
 
 ```text
 0.05
@@ -448,7 +549,9 @@ Different update-rate strategies were also evaluated, including several minimum 
 0.20
 ```
 
-The final robustness comparison used several independent seed sets and deterministic seeded versions of the randomized splitting procedure to ensure reproducible parameter comparisons.
+The purpose of this sweep was to select a K-factor floor that remained useful under different levels of result noise, rather than optimizing only for a single simulation setting.
+
+After selecting **0.10** as the most balanced choice, a separate robustness comparison was performed using several independent seed sets and deterministic seeded versions of the randomized splitting procedure.
 
 In addition to the population-level MAE, two individual players were tracked to illustrate how the App Rating behaves over time in specific cases.
 
@@ -569,6 +672,8 @@ The average relative improvement was approximately **70.2%**, with a median impr
 
 The absolute Balance Score increased as player-rating variation increased, while the relative improvement over random splitting remained close to 70% across all three group types.
 
+These results demonstrate a strong and consistent advantage over ordinary random splitting. They should not be interpreted as proof that the greedy heuristic finds the globally optimal partition, since more computationally intensive search methods may discover even lower Balance Scores.
+
 ## 7.2 Experiment 2 — App Rating Learning Dynamics
 
 ### Initial Behavior
@@ -626,6 +731,27 @@ The error decreased as the number of rounds increased. This indicates that the A
 
 This led to the final part of the experiment: examining whether the rating update rate itself could be improved.
 
+### Selecting the K-Factor Floor
+
+Before the final robustness comparison, several minimum K values were evaluated using the same deterministic simulation conditions.
+
+The following table shows the MAE after 300 rated games:
+
+| Rounds per Game | Original K | Floor 0.05 | Floor 0.10 | Floor 0.15 | Floor 0.20 |
+|---:|---:|---:|---:|---:|---:|
+| 5 | 0.454 | 0.454 | **0.442** | 0.471 | 0.494 |
+| 10 | 0.408 | 0.409 | **0.395** | 0.416 | 0.427 |
+| 20 | 0.391 | 0.390 | 0.371 | 0.367 | **0.363** |
+| 50 | 0.374 | 0.374 | 0.349 | 0.331 | **0.318** |
+
+Higher K-factor floors adapted faster when game results were highly informative, but they also became less stable under noisier conditions.
+
+The **0.10 floor** produced the lowest average MAE across the four tested noise levels, approximately **0.389**, and performed substantially better than larger floors in the noisier 5-round and 10-round conditions.
+
+For this reason, **0.10 was selected as a compromise between long-term adaptability and robustness to noisy results**.
+
+The selected value was then evaluated again across several independent seed sets.
+
 ### K-Factor Robustness
 
 The original update rule gradually reduced the K-factor as more games were played. This makes ratings increasingly stable, but after many games it can also make corrections very small.
@@ -635,7 +761,7 @@ A modified rule was therefore tested in which K is never allowed to fall below *
 After 300 rated games:
 
 | Rounds per Game | Original K | K with 0.10 Floor |
-|---:|---:|---:|
+|---:|---:|
 | 5 | 0.453 | 0.449 |
 | 10 | 0.412 | 0.395 |
 | 20 | 0.391 | 0.374 |
@@ -817,6 +943,8 @@ In this direction, KickSplit could evolve from a tool for organizing and balanci
 # 10. Conclusions
 
 KickSplit was developed as a complete web-based system for organizing recurring amateur football groups. The project combines practical group-management features, including game planning, player availability, guest players, team proposals, voting, results, history, player statistics, and ratings, within a single platform.
+
+The implementation is supported by automated tests covering the core team-generation algorithms as well as backend and frontend application flows.
 
 The algorithmic evaluation showed that the team-generation approach consistently produced more balanced teams than the tested random-splitting baseline. Across the simulated lineups, repeated randomized greedy splitting followed by proposal ranking provided a practical method for generating strong team divisions without claiming global optimality.
 
