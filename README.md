@@ -221,7 +221,7 @@ The project includes automated tests for both the algorithmic components and the
 
 ### Backend Tests
 
-The backend contains unit tests for the core team-generation components, including:
+The backend contains tests for the core team-generation components, including:
 
 - team splitting;
 - Balance Score calculation;
@@ -312,7 +312,7 @@ npm run dev
 
 During local development, Vite proxies requests beginning with `/api` to the backend at `http://localhost:8080`.
 
-The terminal will display the local frontend address after the development server starts.
+The terminal displays the local frontend address after the development server starts.
 
 ---
 
@@ -455,6 +455,8 @@ $$
 
 Because KickSplit currently records **team results rather than individual performance**, every registered player on the same team receives the same rating change for that game.
 
+Guest players contribute to the calculated team strength through the rating stored in the proposal, but their own rating is not updated.
+
 If no wins are recorded for any team, the system treats the actual share as equal to the expected share, producing no rating change.
 
 <p align="center">
@@ -466,7 +468,7 @@ If no wins are recorded for any team, the system treats the actual share as equa
 
 # 5. Evaluation
 
-The algorithmic components of KickSplit were evaluated using controlled simulations. The goal was not to reproduce every aspect of real amateur football, but to create repeatable environments in which the team-generation and rating mechanisms could be examined under known conditions.
+The algorithmic components of KickSplit were evaluated using controlled simulations. The goal was not to reproduce every aspect of real amateur football, but to create environments in which the team-generation and rating mechanisms could be examined under known conditions.
 
 Three experiments were performed.
 
@@ -493,9 +495,11 @@ The baseline consisted of **1,000 random team splits for each lineup**, whose Ba
 20 players per group
 20 game nights per group
 1,000 random splits per lineup
-Random seed: 42
+Synthetic population and attendance seed: 42
 Total evaluated lineups: 1,200
 ```
+
+The production splitting implementations use internal randomness for tie-breaking and random shuffling, so exact individual splits can vary between executions. The evaluation therefore focuses on aggregate performance across a large number of lineups and random baseline samples.
 
 The comparison was:
 
@@ -603,13 +607,17 @@ The experiment used **five independent seed sets**, with **20 groups of 20 playe
 
 The Peer Rating model is intentionally idealized: peer errors are independent and centered around True Skill, without shared social bias, reputation effects, anchoring, or systematic disagreement.
 
-## 5.4 Interpretation of the Simulations
+## 5.4 Interpretation and Reproducibility
 
 The simulations provide a controlled environment in which hidden skill, initial rating error, result noise, and repeated games can be varied independently.
 
-They should not be interpreted as proof that real football groups behave exactly like the simulated population.
+The parameter-comparison experiments use seeded random inputs and deterministic team-splitting variants so that alternative rating strategies can be evaluated under the same simulated conditions.
 
-The purpose of the experiments is to evaluate the internal behavior of the algorithms under reasonable and reproducible assumptions rather than to create conditions in which KickSplit is guaranteed to outperform alternative methods.
+Experiment outputs are preserved as CSV files under `backend/experiment-results`, with report-level summary data under `docs/data`.
+
+The simulations should not be interpreted as proof that real football groups behave exactly like the simulated population.
+
+Their purpose is to evaluate the internal behavior of the algorithms under explicit assumptions rather than to create conditions in which KickSplit is guaranteed to outperform alternative methods.
 
 ---
 
@@ -761,7 +769,7 @@ A modified rule was therefore tested in which K is never allowed to fall below *
 After 300 rated games:
 
 | Rounds per Game | Original K | K with 0.10 Floor |
-|---:|---:|
+|---:|---:|---:|
 | 5 | 0.453 | 0.449 |
 | 10 | 0.412 | 0.395 |
 | 20 | 0.391 | 0.374 |
@@ -820,7 +828,7 @@ When peer information was sparse or sufficiently noisy, App Rating could achieve
 
 ## 8.1 Team Balancing Performance
 
-Experiment 1 showed a clear advantage of the KickSplit team-generation process over random splitting.
+Experiment 1 showed a clear advantage of the KickSplit team-generation process over ordinary random splitting.
 
 Players are processed from strongest to weakest and assigned to the weakest eligible team. KickSplit also evaluates 100 randomized greedy attempts rather than relying on only one execution.
 
@@ -844,12 +852,12 @@ A short game contains substantial randomness. A weaker team may win more often t
 
 Increasing the number of rounds made results more informative and improved rating learning.
 
-This creates a trade-off in \(K\):
+This creates a trade-off in $K$:
 
-- larger \(K\) values correct wrong ratings faster when information is reliable;
-- larger \(K\) values also amplify noisy results;
-- smaller \(K\) values are more stable;
-- excessively small \(K\) values can make long-term correction too slow.
+- larger $K$ values correct wrong ratings faster when information is reliable;
+- larger $K$ values also amplify noisy results;
+- smaller $K$ values are more stable;
+- excessively small $K$ values can make long-term correction too slow.
 
 The selected **0.10 minimum K** was therefore chosen as a compromise across different simulated conditions rather than because it was always the best value in every scenario.
 
@@ -879,7 +887,7 @@ The simulated Peer Rating model is favorable to peer evaluation because peer err
 
 The experiments suggest a useful distinction between KickSplit's two central algorithmic problems.
 
-For **team generation**, once meaningful ratings are available, the multi-proposal greedy method consistently produces better-balanced teams than the tested random baseline.
+For **team generation**, once meaningful ratings are available, the multi-proposal greedy method consistently produces better-balanced teams than the tested ordinary-random baseline.
 
 For **rating estimation**, the problem is more uncertain. Results contain useful information, but they are indirect observations of individual ability.
 
@@ -946,7 +954,7 @@ KickSplit was developed as a complete web-based system for organizing recurring 
 
 The implementation is supported by automated tests covering the core team-generation algorithms as well as backend and frontend application flows.
 
-The algorithmic evaluation showed that the team-generation approach consistently produced more balanced teams than the tested random-splitting baseline. Across the simulated lineups, repeated randomized greedy splitting followed by proposal ranking provided a practical method for generating strong team divisions without claiming global optimality.
+The algorithmic evaluation showed that the team-generation approach consistently produced more balanced teams than the tested ordinary-random-splitting baseline. Across the simulated lineups, repeated randomized greedy splitting followed by proposal ranking provided a practical method for generating strong team divisions without claiming global optimality.
 
 The App Rating experiments revealed a more complex picture. Game results can provide useful information for refining player ratings over time, especially when the results are sufficiently informative. At the same time, team-level feedback and noisy outcomes limit the precision of individual rating updates. The App Rating should therefore be viewed as an evolving estimate of player ability rather than an exact measurement.
 
