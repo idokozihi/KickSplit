@@ -2,6 +2,8 @@
 
 # ⚽ KickSplit
 
+**Project Member:** Ido Kozihi
+
 ### Smart team balancing for amateur football groups
 
 A full-stack platform for organizing recurring football games, generating balanced teams, tracking results, and learning player ratings over time.
